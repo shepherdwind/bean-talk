@@ -1,4 +1,4 @@
-import { Account } from './account';
+import { Account, AccountName } from './account';
 import { Amount } from './types';
 
 /**
@@ -8,7 +8,7 @@ export interface Entry {
   /**
    * The account this entry belongs to
    */
-  account: Account;
+  account: AccountName;
 
   /**
    * The amount of this entry

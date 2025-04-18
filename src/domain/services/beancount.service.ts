@@ -21,7 +21,7 @@ export class BeancountService {
     for (const entry of transaction.entries) {
       const amount = entry.amount.value.toFixed(2);
       const currency = entry.amount.currency;
-      lines.push(`  ${entry.account.name}  ${amount} ${currency}`);
+      lines.push(`  ${entry.account}  ${amount} ${currency}`);
     }
 
     // Add metadata if any

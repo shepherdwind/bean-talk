@@ -7,6 +7,7 @@ export enum Currency {
   EUR = 'EUR', // Euro
   JPY = 'JPY', // Japanese Yen
   GBP = 'GBP', // British Pound
+  SGD = 'SGD', // Singapore Dollar
 }
 
 /**

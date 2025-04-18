@@ -1,6 +1,6 @@
 import { BeancountService } from '../beancount.service';
 import { Transaction } from '../../models/transaction';
-import { Account } from '../../models/account';
+import { Account, AccountName } from '../../models/account';
 import { Amount, AccountType, Currency } from '../../models/types';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -23,11 +23,7 @@ describe('BeancountService', () => {
 
   describe('transactionToBeancount', () => {
     it('should convert a transaction to beancount format', () => {
-      const account: Account = {
-        name: 'Assets:Bank:CNY',
-        type: AccountType.Asset,
-        openDate: '2024-01-01'
-      };
+      const account = AccountName.AssetsICBCSGDSavings;
 
       const transaction: Transaction = {
         date: new Date('2024-03-15'),
@@ -41,10 +37,7 @@ describe('BeancountService', () => {
             }
           },
           {
-            account: {
-              ...account,
-              name: 'Expenses:Food'
-            },
+            account: AccountName.ExpensesFood,
             amount: {
               value: -100.50,
               currency: Currency.CNY
@@ -68,11 +61,7 @@ describe('BeancountService', () => {
 
   describe('appendTransaction', () => {
     it('should append a transaction to the beancount file', async () => {
-      const account: Account = {
-        name: 'Assets:Bank:CNY',
-        type: AccountType.Asset,
-        openDate: '2024-01-01'
-      };
+      const account = AccountName.AssetsICBCSGDSavings;
 
       const transaction: Transaction = {
         date: new Date('2024-03-15'),
@@ -86,10 +75,7 @@ describe('BeancountService', () => {
             }
           },
           {
-            account: {
-              ...account,
-              name: 'Expenses:Food'
-            },
+            account: AccountName.ExpensesFood,
             amount: {
               value: -100.50,
               currency: Currency.CNY
@@ -123,11 +109,7 @@ describe('BeancountService', () => {
     });
 
     it('should create file if it does not exist', async () => {
-      const account: Account = {
-        name: 'Assets:Bank:CNY',
-        type: AccountType.Asset,
-        openDate: '2024-01-01'
-      };
+      const account = AccountName.AssetsICBCSGDSavings;
 
       const transaction: Transaction = {
         date: new Date('2024-03-15'),

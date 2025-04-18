@@ -1,13 +1,67 @@
 import { AccountType } from './types';
 
 /**
+ * Enum representing all account names
+ */
+export enum AccountName {
+  // Assets
+  AssetsICBCSGDSavings = 'Assets:ICBC:SGD:Savings',
+  AssetsDBSSGDWife = 'Assets:DBS:SGD:Wife',
+  AssetsCMBCRMB = 'Assets:CMBC:RMB',
+  AssetsDBSSGDSaving = 'Assets:DBS:SGD:Saving',
+  AssetsInvestmentSRS = 'Assets:Investment:SRS',
+  AssetsSGDBitcoin = 'Assets:SGD:Bitcoin',
+  AssetsSGDMoomoo = 'Assets:SGD:Moomoo',
+  AssetsSGDMoomooWife = 'Assets:SGD:Moomoo:Wife',
+
+  // Expenses
+  ExpensesCash = 'Expenses:Cash',
+  ExpensesEducationKindergarten = 'Expenses:Education:Kindergarten',
+  ExpensesFeesWires = 'Expenses:Fees:Wires',
+  ExpensesFood = 'Expenses:Food',
+  ExpensesFoodDining = 'Expenses:Food:Dining',
+  ExpensesHealthDental = 'Expenses:Health:Dental',
+  ExpensesHealthEyes = 'Expenses:Health:Eyes',
+  ExpensesHealthMedical = 'Expenses:Health:Medical',
+  ExpensesHousingRent = 'Expenses:Housing:Rent',
+  ExpensesInsurance = 'Expenses:Insurance',
+  ExpensesShoppingKids = 'Expenses:Shopping:Kids',
+  ExpensesShoppingMisc = 'Expenses:Shopping:Misc',
+  ExpensesShoppingOffline = 'Expenses:Shopping:Offline',
+  ExpensesShoppingOnline = 'Expenses:Shopping:Online',
+  ExpensesShoppingPayla = 'Expenses:Shopping:Payla',
+  ExpensesShoppingSupermarket = 'Expenses:Shopping:Supermarket',
+  ExpensesShoppingWife = 'Expenses:Shopping:Wife',
+  ExpensesSportActivieSG = 'Expenses:Sport:ActivieSG',
+  ExpensesTaxIncome = 'Expenses:Tax:Income',
+  ExpensesTransportBus = 'Expenses:Transport:Bus',
+  ExpensesTransportEzLink = 'Expenses:Transport:EzLink',
+  ExpensesTransportGrab = 'Expenses:Transport:Grab',
+  ExpensesTransportTaxi = 'Expenses:Transport:Taxi',
+  ExpensesTravelFlight = 'Expenses:Travel:Flight',
+  ExpensesTravelHotels = 'Expenses:Travel:Hotels',
+  ExpensesTravelTaxi = 'Expenses:Travel:Taxi',
+  ExpensesTravelTrain = 'Expenses:Travel:Train',
+  ExpensesUtilities = 'Expenses:Utilities',
+
+  // Income
+  IncomeBankCashback = 'Income:Bank:Cashback',
+  IncomeSalary = 'Income:Salary',
+
+  // Liabilities
+  LiabilitiesLoanJihui = 'Liabilities:Loan:Jihui',
+  LiabilitiesLoanMingjun = 'Liabilities:Loan:Mingjun',
+  LiabilitiesLoanUnknow = 'Liabilities:Loan:Unknow',
+}
+
+/**
  * Represents a financial account
  */
 export interface Account {
   /**
    * The name of the account
    */
-  name: string;
+  name: AccountName;
 
   /**
    * The type of the account
@@ -31,76 +85,47 @@ export interface Account {
 }
 
 /**
- * Predefined list of accounts
+ * Get account type from account name
  */
-export const accounts: Account[] = [
-  // Assets
-  { name: 'Assets:ICBC:SGD:Savings', type: AccountType.Asset, openDate: '2019-12-01' },
-  { name: 'Assets:DBS:SGD:Wife', type: AccountType.Asset, openDate: '2019-12-01' },
-  { name: 'Assets:CMBC:RMB', type: AccountType.Asset, openDate: '2011-10-10' },
-  { name: 'Assets:DBS:SGD:Saving', type: AccountType.Asset, openDate: '2011-10-10' },
-  { name: 'Assets:Investment:SRS', type: AccountType.Asset, openDate: '2011-10-10' },
-  { name: 'Assets:SGD:Bitcoin', type: AccountType.Asset, openDate: '2011-10-10' },
-  { name: 'Assets:SGD:Moomoo', type: AccountType.Asset, openDate: '2011-10-10' },
-  { name: 'Assets:SGD:Moomoo:Wife', type: AccountType.Asset, openDate: '2011-10-10' },
-
-  // Expenses
-  { name: 'Expenses:Cash', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Education:Kindergarten', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Fees:Wires', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Food', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Food:Dining', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Health:Dental', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Health:Eyes', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Health:Medical', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Housing:Rent', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Insurance', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Shopping:Kids', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Shopping:Misc', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Shopping:Offline', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Shopping:Online', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Shopping:Payla', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Shopping:Supermarket', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Shopping:Wife', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Sport:ActivieSG', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Tax:Income', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Transport:Bus', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Transport:EzLink', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Transport:Grab', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Transport:Taxi', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Travel:Flight', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Travel:Hotels', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Travel:Taxi', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Travel:Train', type: AccountType.Expense, openDate: '2011-10-10' },
-  { name: 'Expenses:Utilities', type: AccountType.Expense, openDate: '2011-10-10' },
-
-  // Income
-  { name: 'Income:Bank:Cashback', type: AccountType.Income, openDate: '2011-10-10' },
-  { name: 'Income:Salary', type: AccountType.Income, openDate: '2011-10-10' },
-
-  // Liabilities
-  { name: 'Liabilities:Loan:Jihui', type: AccountType.Liability, openDate: '2011-10-10' },
-  { name: 'Liabilities:Loan:Mingjun', type: AccountType.Liability, openDate: '2011-10-10' },
-  { name: 'Liabilities:Loan:Unknow', type: AccountType.Liability, openDate: '2011-10-10' },
-];
-
-/**
- * Get all accounts of a specific type
- */
-export function getAccountsByType(type: AccountType): Account[] {
-  return accounts.filter(account => account.type === type);
+export function getAccountType(name: AccountName): AccountType {
+  const prefix = name.split(':')[0];
+  switch (prefix) {
+    case 'Assets':
+      return AccountType.Asset;
+    case 'Expenses':
+      return AccountType.Expense;
+    case 'Income':
+      return AccountType.Income;
+    case 'Liabilities':
+      return AccountType.Liability;
+    default:
+      throw new Error(`Unknown account type for account: ${name}`);
+  }
 }
 
 /**
  * Get account by name
  */
-export function getAccountByName(name: string): Account | undefined {
-  return accounts.find(account => account.name === name);
+export function getAccountByName(name: AccountName): Account {
+  return {
+    name,
+    type: getAccountType(name),
+    openDate: '2011-10-10', // Default open date
+  };
+}
+
+/**
+ * Get all accounts of a specific type
+ */
+export function getAccountsByType(type: AccountType): Account[] {
+  return Object.values(AccountName)
+    .filter(name => getAccountType(name) === type)
+    .map(name => getAccountByName(name));
 }
 
 /**
  * Get all account names
  */
-export function getAllAccountNames(): string[] {
-  return accounts.map(account => account.name);
+export function getAllAccountNames(): AccountName[] {
+  return Object.values(AccountName);
 } 
