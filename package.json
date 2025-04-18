@@ -1,0 +1,32 @@
+{
+  "name": "bean-talk",
+  "version": "1.0.0",
+  "description": "A personal finance accounting system with Telegram bot interface",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "lint": "eslint . --ext .ts"
+  },
+  "keywords": ["finance", "accounting", "telegram", "bot", "beancount"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "telegraf": "^4.12.2",
+    "openai": "^4.6.0",
+    "googleapis": "^148.0.0",
+    "dotenv": "^16.0.3",
+    "node-cron": "^3.0.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^22.14.1",
+    "@types/node-cron": "^3.0.0",
+    "ts-node": "^10.9.1",
+    "ts-jest": "^29.0.0",
+    "@types/jest": "^29.0.0"
+  }
+}
