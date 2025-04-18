@@ -28,12 +28,30 @@ async function main() {
     const accountingService = new AccountingService(beancountService);
     
     // Load Gmail credentials and tokens
-    const credentials: GmailCredentials = JSON.parse(
-      await fs.readFile(process.env.GMAIL_CREDENTIALS_PATH || '', 'utf-8')
-    );
-    const tokens: GmailTokens = JSON.parse(
-      await fs.readFile(process.env.GMAIL_TOKENS_PATH || '', 'utf-8')
-    );
+    const credentials = await GmailAdapter.loadCredentials(process.env.GMAIL_CREDENTIALS_PATH || '');
+
+    let tokens: GmailTokens;
+    try {
+      tokens = JSON.parse(
+        await fs.readFile(process.env.GMAIL_TOKENS_PATH || '', 'utf-8')
+      );
+    } catch (error) {
+      console.log('No token.json found. Initializing Gmail authentication...');
+      const gmailAdapter = new GmailAdapter(credentials, {
+        access_token: '',
+        refresh_token: '',
+        scope: '',
+        token_type: '',
+        expiry_date: 0
+      });
+      
+      const authUrl = gmailAdapter.generateAuthUrl();
+      console.log('Please visit this URL to authorize the application:');
+      console.log(authUrl);
+      
+      tokens = await gmailAdapter.getInitialTokens();
+      console.log('Gmail authentication successful!');
+    }
     
     // Initialize Gmail adapter
     const gmailAdapter = new GmailAdapter(credentials, tokens);
@@ -51,25 +69,26 @@ async function main() {
     // Initialize Telegram bot
     const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN || '');
     
+    
+    // Schedule Gmail bill check every 2 hours
+    // cron.schedule('0 */2 * * *', async () => {
+    console.log('Running scheduled Gmail bill check...');
+    try {
+      await automationService.scheduledCheck();
+    } catch (error) {
+      console.error('Error in scheduled Gmail bill check:', error);
+    }
+    // });
+    
     // Basic command handler
     bot.command('start', (ctx) => {
       ctx.reply('Welcome to BeanTalk! Your personal finance assistant.');
     });
     
+    console.log('Starting bot...');
     // Start the bot
     await bot.launch();
     console.log('BeanTalk bot is running...');
-    
-    // Schedule Gmail bill check every 2 hours
-    cron.schedule('0 */2 * * *', async () => {
-      console.log('Running scheduled Gmail bill check...');
-      try {
-        await automationService.scheduledCheck();
-      } catch (error) {
-        console.error('Error in scheduled Gmail bill check:', error);
-      }
-    });
-    
     // Enable graceful stop
     process.once('SIGINT', () => bot.stop('SIGINT'));
     process.once('SIGTERM', () => bot.stop('SIGTERM'));

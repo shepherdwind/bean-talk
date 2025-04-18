@@ -1,6 +1,9 @@
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { promises as fs } from 'fs';
+import { createServer } from 'http';
+import { URL } from 'url';
+import { extractEmailHeaders, extractEmailBody } from './email.utils';
 
 export interface GmailCredentials {
   client_id: string;
@@ -20,7 +23,7 @@ export interface Email {
   id: string;
   subject: string;
   from: string;
-  date: string;
+  date?: string;
   body: string;
 }
 
@@ -39,16 +42,127 @@ export class GmailAdapter {
     );
   }
 
+  static async loadCredentials(path: string): Promise<GmailCredentials> {
+    const rawCredentials = JSON.parse(await fs.readFile(path, 'utf-8'));
+    return {
+      client_id: rawCredentials.installed.client_id,
+      client_secret: rawCredentials.installed.client_secret,
+      redirect_uri: rawCredentials.installed.redirect_uris[0]
+    };
+  }
+
   async init(): Promise<void> {
+    console.log('Initializing Gmail adapter...');
+    console.log('Setting credentials...');
     this.auth.setCredentials(this.tokens);
+    console.log('Credentials set successfully');
     
     // Handle token refresh
     this.auth.on('tokens', async (tokens) => {
+      console.log('Token refresh event received');
       if (tokens.refresh_token) {
-        // Save the new refresh token
+        console.log('Received new refresh token, saving...');
         this.tokens.refresh_token = tokens.refresh_token;
-        await this.saveTokens(this.tokens);
       }
+      if (tokens.access_token) {
+        console.log('Received new access token, updating...');
+        this.tokens.access_token = tokens.access_token;
+        this.tokens.expiry_date = tokens.expiry_date || 0;
+      }
+      await this.saveTokens(this.tokens);
+    });
+
+    // Set up automatic token refresh
+    this.auth.on('tokens', async (tokens) => {
+      if (tokens.access_token) {
+        // Schedule token refresh 5 minutes before expiry
+        const expiryDate = tokens.expiry_date || 0;
+        const refreshTime = expiryDate - Date.now() - 5 * 60 * 1000;
+        if (refreshTime > 0) {
+          console.log(`Scheduling token refresh in ${refreshTime}ms`);
+          setTimeout(() => {
+            console.log('Refreshing access token...');
+            this.auth.refreshAccessToken();
+          }, refreshTime);
+        }
+      }
+    });
+
+    // Verify the auth is working
+    try {
+      console.log('Verifying Gmail API connection...');
+      const response = await this.gmail.users.getProfile({
+        auth: this.auth,
+        userId: 'me'
+      });
+      console.log('Gmail API connection verified successfully');
+      console.log('Connected as:', response.data.emailAddress);
+    } catch (error) {
+      console.error('Error verifying Gmail API connection:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate OAuth URL for authorization
+   */
+  generateAuthUrl(): string {
+    console.log('Generating OAuth URL for authorization...');
+    const url = this.auth.generateAuthUrl({
+      access_type: 'offline',
+      scope: [
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.modify'
+      ],
+      prompt: 'consent'
+    });
+    console.log('Please visit this URL to authorize the application:');
+    console.log(url);
+    return url;
+  }
+
+  /**
+   * Get initial tokens through OAuth flow
+   */
+  async getInitialTokens(): Promise<GmailTokens> {
+    console.log('Starting OAuth flow to get initial tokens...');
+    return new Promise((resolve, reject) => {
+      const server = createServer(async (req, res) => {
+        try {
+          const url = new URL(req.url!, `http://${req.headers.host}`);
+          const code = url.searchParams.get('code');
+
+          if (!code) {
+            res.writeHead(400);
+            res.end('Authorization code not found');
+            server.close();
+            reject(new Error('Authorization code not found'));
+            return;
+          }
+
+          console.log('Received authorization code, exchanging for tokens...');
+          const { tokens } = await this.auth.getToken(code);
+          this.tokens = tokens as GmailTokens;
+          await this.saveTokens(this.tokens);
+          console.log('Successfully obtained and saved tokens');
+
+          res.writeHead(200);
+          res.end('Authorization successful! You can close this window.');
+          server.close();
+          resolve(this.tokens);
+        } catch (error) {
+          console.error('Error during authorization:', error);
+          res.writeHead(500);
+          res.end('Error during authorization');
+          server.close();
+          reject(error);
+        }
+      });
+
+      const redirectUri = new URL(this.credentials.redirect_uri);
+      server.listen(redirectUri.port || 80, () => {
+        console.log(`OAuth server listening on port ${redirectUri.port || 80}`);
+      });
     });
   }
 
@@ -103,29 +217,12 @@ export class GmailAdapter {
         id: messageId,
       });
 
-      const headers = response.data.payload?.headers || [];
-      const subject = headers.find(h => h.name === 'Subject')?.value || '';
-      const from = headers.find(h => h.name === 'From')?.value || '';
-      const date = headers.find(h => h.name === 'Date')?.value || '';
-
-      // Get email body
-      let body = '';
-      if (response.data.payload?.body?.data) {
-        body = Buffer.from(response.data.payload.body.data, 'base64').toString();
-      } else if (response.data.payload?.parts) {
-        for (const part of response.data.payload.parts) {
-          if (part.mimeType === 'text/plain') {
-            body = Buffer.from(part.body?.data || '', 'base64').toString();
-            break;
-          }
-        }
-      }
+      const headers = extractEmailHeaders(response.data.payload?.headers || []);
+      const body = extractEmailBody(response.data.payload || {});
 
       return {
         id: messageId,
-        subject,
-        from,
-        date,
+        ...headers,
         body,
       };
     } catch (error) {
@@ -136,7 +233,9 @@ export class GmailAdapter {
 
   private async saveTokens(tokens: GmailTokens): Promise<void> {
     try {
+      console.log('Saving tokens to token.json...');
       await fs.writeFile('token.json', JSON.stringify(tokens, null, 2));
+      console.log('Tokens saved successfully');
     } catch (error) {
       console.error('Error saving tokens:', error);
       throw error;

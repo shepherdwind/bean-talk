@@ -13,24 +13,31 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint . --ext .ts"
   },
-  "keywords": ["finance", "accounting", "telegram", "bot", "beancount"],
+  "keywords": [
+    "finance",
+    "accounting",
+    "telegram",
+    "bot",
+    "beancount"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "telegraf": "^4.12.2",
-    "openai": "^4.6.0",
-    "googleapis": "^148.0.0",
     "dotenv": "^16.0.3",
+    "googleapis": "^148.0.0",
+    "html-to-text": "^9.0.5",
     "node-cron": "^3.0.2",
-    "fs": "0.0.1-security"
+    "openai": "^4.6.0",
+    "telegraf": "^4.12.2"
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
+    "@types/html-to-text": "^9.0.4",
+    "@types/jest": "^29.5.12",
     "@types/node": "^20.11.24",
     "@types/node-cron": "^3.0.0",
-    "ts-node": "^10.9.2",
+    "jest": "^29.7.0",
     "ts-jest": "^29.1.2",
-    "@types/jest": "^29.5.12",
-    "jest": "^29.7.0"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   }
 }

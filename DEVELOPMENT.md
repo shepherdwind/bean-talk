@@ -37,26 +37,35 @@ Before you begin, ensure you have the following installed:
 3. Configure the OAuth consent screen:
    - Choose "External" user type
    - Fill in the required application information
-   - Add necessary scopes (Gmail API scopes)
+   - Add necessary scopes:
+     ```
+     https://www.googleapis.com/auth/gmail.readonly
+     https://www.googleapis.com/auth/gmail.modify
+     ```
 4. Create OAuth client ID:
-   - Application type: "Desktop application"
+   - Application type: "Desktop application" (for development)
    - Name: "Bean Talk"
-   - Download the client configuration file
+   - Download the client configuration file and save it as `credentials.json` in the project root
+
+> **Note**: We use OAuth 2.0 because it's the secure way to access Gmail API. It allows users to explicitly grant permission to our application to access their Gmail data, and they can revoke access at any time.
 
 ### 3. Environment Configuration
 
 Create a `.env` file in the project root with the following variables:
 
 ```env
-# Gmail API Configuration
-GMAIL_CLIENT_ID=your_client_id
-GMAIL_CLIENT_SECRET=your_client_secret
-GMAIL_REDIRECT_URI=http://localhost:3000/auth/gmail/callback
+# Gmail API Credentials
+GMAIL_CREDENTIALS_PATH=./credentials.json
+GMAIL_TOKENS_PATH=./token.json
 
-# Application Configuration
+# Application Settings
 NODE_ENV=development
-PORT=3000
 ```
+
+> **Important**: 
+> 1. The `credentials.json` file contains your OAuth 2.0 client credentials
+> 2. The `token.json` file will be automatically generated after the first successful OAuth authorization
+> 3. Both files are listed in `.gitignore` to prevent accidental commits of sensitive information
 
 ## Local Development
 

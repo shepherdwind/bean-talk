@@ -14,16 +14,23 @@ export class AutomationService {
       console.log('Starting scheduled bill check...');
       
       // Fetch unread emails that might contain bills
-      // You can customize the query to match your bill emails
+      console.log('Fetching emails with query: subject:(Card Transaction Alert)');
       const emails = await this.gmailAdapter.fetchUnreadEmails(
         'subject:(Card Transaction Alert)'
       );
 
       console.log(`Found ${emails.length} potential bill emails`);
 
+      if (emails.length === 0) {
+        console.log('No bill emails found, finishing check');
+        return;
+      }
+
       for (const email of emails) {
         try {
+          console.log(`Starting to process email: ${email.subject} (${email.id})`);
           await this.processBillEmail(email);
+          console.log(`Finished processing email: ${email.subject}`);
         } catch (error) {
           console.error(`Error processing email ${email.id}:`, error);
           // Continue with next email even if one fails
@@ -39,8 +46,6 @@ export class AutomationService {
   }
 
   private async processBillEmail(email: Email): Promise<void> {
-    console.log(`Processing email: ${email.subject}`);
-
     // Extract bill information using the appropriate parser
     const transaction = await this.billParserService.parseBillText(email);
 

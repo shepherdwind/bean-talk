@@ -16,7 +16,7 @@ export class DBSEmailParser implements EmailParser {
   canParse(email: Email): boolean {
     return (
       /Card Transaction Alert/i.test(email.subject) &&
-      email.from === 'ibanking.alert@dbs.com'
+      /ibanking\.alert@dbs\.com/i.test(email.from)
     );
   }
 
@@ -29,12 +29,19 @@ export class DBSEmailParser implements EmailParser {
     }
 
     try {
-      const amountStr = this.extractValue(email.body, /Amount: SGD(\d+(\.\d{2})?)/i);
+      const amountMatch = email.body.match(/Amount: (SGD|USD)(\d+(\.\d{2})?)/i);
+      if (!amountMatch) {
+        console.log('Failed to extract amount from DBS transaction email');
+        return null;
+      }
+      
+      const currency = amountMatch[1].toUpperCase() as Currency;
+      const amountStr = amountMatch[2];
       const dateStr = this.extractValue(email.body, /Date & Time: (\d{2} [A-Za-z]{3} \d{2}:\d{2}) \(SGT\)/i);
       const merchant = this.extractValue(email.body, /To: ([^\n]+)/i);
       const cardInfo = this.extractValue(email.body, /From: ([^\n]+)/i);
 
-      if (!amountStr || !dateStr || !merchant) {
+      if (!dateStr || !merchant) {
         console.log('Failed to extract required DBS transaction information');
         return null;
       }
@@ -43,7 +50,7 @@ export class DBSEmailParser implements EmailParser {
       const date = this.parseDate(dateStr);
       
       // Parse amount
-      const amount = this.parseAmount(amountStr);
+      const amount = this.parseAmount(amountStr, currency);
 
       // Create transaction entries
       const entries: Entry[] = [
@@ -104,11 +111,11 @@ export class DBSEmailParser implements EmailParser {
     return date;
   }
 
-  private parseAmount(amountStr: string): Amount {
+  private parseAmount(amountStr: string, currency: Currency): Amount {
     const value = parseFloat(amountStr);
     return {
       value,
-      currency: Currency.SGD
+      currency
     };
   }
 } 
