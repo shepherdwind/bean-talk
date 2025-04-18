@@ -165,4 +165,49 @@ interface INLPService {
     { account: "Assets:Alipay", amount: { value: 35.00, currency: Currency.CNY } }
   ]
 }
-``` 
+```
+
+### 2.4 Beancount 服务(BeancountService)
+
+```typescript
+interface IBeancountService {
+  // 将交易转换为 beancount 文本格式
+  transactionToBeancount(transaction: Transaction): string;
+  
+  // 将 beancount 文本转换为交易对象
+  beancountToTransaction(beancountText: string): Transaction;
+  
+  // 读取 beancount 文件
+  readBeancountFile(filePath: string): Promise<string>;
+  
+  // 写入 beancount 文件
+  writeBeancountFile(filePath: string, content: string): Promise<void>;
+  
+  // 验证 beancount 文件格式
+  validateBeancountFile(content: string): Promise<boolean>;
+}
+```
+
+这个服务负责：
+1. 在内存中的交易对象和 beancount 文本格式之间进行转换
+2. 管理 beancount 文件的读写操作
+3. 验证 beancount 文件的格式正确性
+
+## 3. 文件组织结构
+
+```
+data/
+  beancount/
+    main.bean           # 主文件，包含账户定义和导入语句
+    accounts/
+      assets.bean       # 资产账户
+      liabilities.bean  # 负债账户
+      income.bean       # 收入账户
+      expenses.bean     # 支出账户
+      equity.bean       # 权益账户
+    transactions/
+      YYYY/
+        MM.bean         # 按年月组织的交易记录
+    templates/          # 交易模板
+    metadata/          # 元数据文件
+```
