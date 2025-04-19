@@ -11,18 +11,22 @@ Bean Talk is a project that helps users manage and analyze their Beancount files
 - Beancount file management
 - Gmail integration for transaction processing
 - User-friendly interface
+- Docker support for easy deployment
 
 ## Prerequisites
 
 - Node.js (v14 or higher)
 - npm or yarn
 - Gmail account (for email integration)
+- Docker and Docker Compose (optional, for containerized deployment)
 
 ## Installation
 
+### Option 1: Traditional Installation
+
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/bean-talk.git
+git clone https://github.com/shepherdwind/bean-talk.git
 cd bean-talk
 ```
 
@@ -36,9 +40,79 @@ yarn install
 3. Set up environment variables:
 Create a `.env` file in the root directory and add necessary environment variables.
 
+### Option 2: Docker Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/shepherdwind/bean-talk.git
+cd bean-talk
+```
+
+2. Create a data directory for persistent storage:
+```bash
+mkdir data
+```
+
+3. Set up environment variables:
+Create a `.env` file in the root directory with your configuration.
+
+4. Start the application using Docker Compose:
+```bash
+docker-compose up -d
+```
+
+The application will be available at http://localhost:3000
+
 ## Usage
 
 [Add usage instructions here]
+
+## Docker Support
+
+### Using Docker Compose (Recommended)
+
+The easiest way to run Bean Talk is using Docker Compose:
+
+```bash
+# Start the application
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the application
+docker-compose down
+```
+
+### Manual Docker Usage
+
+You can also run the Docker container directly:
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/shepherdwind/bean-talk:latest
+
+# Run the container
+docker run -d \
+  -v $(pwd)/data:/app/data \
+  --user "1000:1000" \  # Run as user:group 1000:1000
+  --name bean-talk \
+  ghcr.io/shepherdwind/bean-talk:latest
+```
+
+### Environment Variables
+
+When using Docker, you can set environment variables in the `.env` file or pass them directly to the container:
+
+```bash
+docker run -d \
+  -v $(pwd)/data:/app/data \
+  --user "1000:1000" \  # Run as user:group 1000:1000
+  -e GMAIL_CLIENT_ID=your_client_id \
+  -e GMAIL_CLIENT_SECRET=your_client_secret \
+  --name bean-talk \
+  ghcr.io/shepherdwind/bean-talk:latest
+```
 
 ## Development
 

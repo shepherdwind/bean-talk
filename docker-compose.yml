@@ -1,0 +1,12 @@
+services:
+  bean-talk:
+    image: ghcr.io/${GITHUB_REPOSITORY:-shepherdwind/bean-talk}:latest
+    container_name: bean-talk
+    user: "1000:1000"  # Run container as user:group 1000:1000
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped 
