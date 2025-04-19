@@ -173,8 +173,8 @@ export class GmailAdapter {
       const response = await this.gmail.users.messages.list({
         auth: this.auth,
         userId: 'me',
-        // q: `is:unread ${query}`,
-        q: `${query}`,
+        q: `is:unread ${query}`,
+        // q: `${query}`,
       });
 
       const messages = response.data.messages || [];

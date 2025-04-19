@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import cron from 'node-cron';
-import { Telegraf } from 'telegraf';
-import { GmailAdapter, GmailCredentials, GmailTokens } from './infrastructure/gmail/gmail.adapter';
+import { GmailAdapter, GmailTokens } from './infrastructure/gmail/gmail.adapter';
 import { OpenAIAdapter } from './infrastructure/openai/openai.adapter';
 import { NLPService } from './domain/services/nlp.service';
 import { BeancountService } from './domain/services/beancount.service';
@@ -124,31 +123,4 @@ export async function setupAutomation(): Promise<void> {
   });
   
   logger.info('Automation tasks setup completed');
-}
-
-/**
- * 设置Telegram机器人
- * @returns 初始化好的Telegram机器人实例
- */
-export async function setupTelegramBot(): Promise<Telegraf> {
-  logger.info('Setting up Telegram bot...');
-  
-  // Initialize Telegram bot
-  const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN || '');
-  
-  // Basic command handler
-  bot.command('start', (ctx) => {
-    ctx.reply('Welcome to BeanTalk! Your personal finance assistant.');
-  });
-  
-  // Start the bot
-  logger.info('Starting bot...');
-  await bot.launch();
-  logger.info('BeanTalk bot is running...');
-  
-  // Enable graceful stop
-  process.once('SIGINT', () => bot.stop('SIGINT'));
-  process.once('SIGTERM', () => bot.stop('SIGTERM'));
-  
-  return bot;
 } 

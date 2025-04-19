@@ -19,6 +19,11 @@ export class TelegramAdapter {
       this.logger.warn('TELEGRAM_CHAT_ID not found in environment variables');
     }
     this.chatId = chatId || '';
+
+    // Set up command handlers
+    this.bot.command('start', (ctx) => {
+      ctx.reply('Welcome to BeanTalk! Your personal finance assistant.');
+    });
   }
 
   async init(): Promise<void> {
@@ -26,6 +31,10 @@ export class TelegramAdapter {
       this.logger.info('Initializing Telegram bot...');
       await this.bot.launch();
       this.logger.info('Telegram bot initialized successfully');
+
+      // Enable graceful stop
+      process.once('SIGINT', () => this.bot.stop('SIGINT'));
+      process.once('SIGTERM', () => this.bot.stop('SIGTERM'));
     } catch (error) {
       this.logger.error('Failed to initialize Telegram bot:', error);
       throw error;

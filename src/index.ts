@@ -3,9 +3,9 @@ import { logger, container, Logger } from './infrastructure/utils';
 import { 
   initializeContainer, 
   setupGmailAdapter, 
-  setupAutomation, 
-  setupTelegramBot 
+  setupAutomation
 } from './app-initializer';
+import { TelegramAdapter } from './infrastructure/telegram/telegram.adapter';
 
 // Load environment variables
 dotenv.config();
@@ -26,8 +26,9 @@ async function main() {
     // 设置自动化任务
     await setupAutomation();
     
-    // 设置Telegram机器人
-    await setupTelegramBot();
+    // 初始化并启动 Telegram 机器人
+    const telegramAdapter = container.getByClass(TelegramAdapter);
+    await telegramAdapter.init();
     
     logger.info('BeanTalk application started successfully');
   } catch (error) {
