@@ -2,14 +2,14 @@ import { GmailAdapter, Email } from '../../infrastructure/gmail/gmail.adapter';
 import { BillParserService } from '../../domain/services/bill-parser.service';
 import { AccountingService } from '../../domain/services/accounting.service';
 import { ILogger, container, Logger } from '../../infrastructure/utils';
-import { TelegramAdapter } from '../../infrastructure/telegram/telegram.adapter';
+import { ApplicationEventEmitter } from '../../infrastructure/events/event-emitter';
 
 export class AutomationService {
   private gmailAdapter: GmailAdapter;
   private billParserService: BillParserService;
   private accountingService: AccountingService;
   private logger: ILogger;
-  private telegramAdapter: TelegramAdapter;
+  private eventEmitter: ApplicationEventEmitter;
 
   constructor() {
     // 使用提供的依赖，或者从容器通过类名获取
@@ -17,7 +17,7 @@ export class AutomationService {
     this.billParserService = container.getByClass(BillParserService);
     this.accountingService = container.getByClass(AccountingService);
     this.logger = container.getByClass(Logger);
-    this.telegramAdapter = container.getByClass(TelegramAdapter);
+    this.eventEmitter = container.getByClass(ApplicationEventEmitter);
   }
 
   async scheduledCheck(): Promise<void> {
@@ -54,23 +54,10 @@ export class AutomationService {
         }
       }
 
-      // Send notification about the processing results
-      if (processedCount > 0 || failedCount > 0) {
-        const message = `📧 Bill Processing Report:\n` +
-          `✅ Successfully processed: ${processedCount}\n` +
-          `❌ Failed to process: ${failedCount}\n` +
-          `📊 Total emails checked: ${emails.length}`;
-        
-        await this.telegramAdapter.sendNotification(message);
-      }
-
+      this.logger.info(`Bill processing completed. Successfully processed: ${processedCount}, Failed: ${failedCount}`);
       this.logger.info('Finished scheduled bill check');
     } catch (error) {
       this.logger.error('Error in scheduled check:', error);
-      
-      // Send error notification
-      const errorMessage = `⚠️ Error in scheduled bill check:\n${error instanceof Error ? error.message : String(error)}`;
-      await this.telegramAdapter.sendNotification(errorMessage);
     }
   }
 
@@ -92,15 +79,6 @@ export class AutomationService {
       await this.gmailAdapter.markAsRead(email.id);
 
       this.logger.info(`Successfully processed bill from email: ${email.subject}`);
-
-      // Send notification for successful bill processing
-      const expenseEntry = transaction.entries.find(entry => entry.amount.value < 0);
-      const message = `💰 New Transaction Recorded:\n` +
-        `🏷️ Description: ${transaction.description}\n` +
-        `💵 Amount: ${expenseEntry ? Math.abs(expenseEntry.amount.value) : 0} ${expenseEntry?.amount.currency || ''}\n` +
-        `🏦 Account: ${expenseEntry?.account}`;
-      
-      await this.telegramAdapter.sendNotification(message);
     } else {
       this.logger.warn(`Could not extract bill information from email: ${email.subject}`);
     }

@@ -10,6 +10,8 @@ import { BillParserService } from './domain/services/bill-parser.service';
 import { logger, container, Logger } from './infrastructure/utils/index';
 import { EmailParserFactory } from './infrastructure/email-parsers';
 import { TelegramAdapter } from './infrastructure/telegram/telegram.adapter';
+import { EventListenerService } from './infrastructure/events/event-listener.service';
+import { ApplicationEventEmitter } from './infrastructure/events/event-emitter';
 
 /**
  * 初始化依赖注入容器和基础服务
@@ -20,6 +22,14 @@ export async function initializeContainer(): Promise<void> {
   // Register the logger by class name
   container.registerClass(Logger, logger);
   
+  // Register ApplicationEventEmitter
+  const eventEmitter = new ApplicationEventEmitter();
+  container.registerClass(ApplicationEventEmitter, eventEmitter);
+  
+  // Initialize and register EventListenerService
+  const eventListenerService = new EventListenerService();
+  container.registerClass(EventListenerService, eventListenerService);
+
   // Initialize OpenAI adapter and register it with Class
   const openaiAdapter = new OpenAIAdapter(process.env.OPENAI_API_KEY || '');
   container.registerClass(OpenAIAdapter, openaiAdapter);

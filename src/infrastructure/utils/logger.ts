@@ -107,5 +107,10 @@ if (process.env.LOG_LEVEL) {
   const envLogLevel = process.env.LOG_LEVEL.toUpperCase();
   if (envLogLevel in LogLevel) {
     logger.setLogLevel(LogLevel[envLogLevel as keyof typeof LogLevel]);
+    console.log(`Logger initialized with level: ${envLogLevel}`);
+  } else {
+    console.warn(`Invalid LOG_LEVEL: ${envLogLevel}. Using default level.`);
   }
+} else {
+  console.log('LOG_LEVEL not set. Using default level.');
 }

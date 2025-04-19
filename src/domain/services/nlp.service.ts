@@ -1,8 +1,13 @@
-import { Transaction } from '../models/transaction';
-import { Account } from '../models/account';
-import { Amount, Currency } from '../models/types';
+import { getAccountsByType } from '../models/account';
 import { OpenAIAdapter } from '../../infrastructure/openai/openai.adapter';
 import { logger, container } from '../../infrastructure/utils';
+import { AccountType } from '../models/types';
+
+export interface CategoryOptions {
+  primaryCategory: string;
+  alternativeCategory: string;
+  suggestedNewCategory: string;
+}
 
 export class NLPService {
   private openaiAdapter: OpenAIAdapter;
@@ -12,97 +17,38 @@ export class NLPService {
     this.openaiAdapter = openaiAdapter || container.getByClass(OpenAIAdapter);
   }
 
-  async parseBillText(text: string): Promise<Transaction | null> {
+  async categorizeMerchant(merchant: string, additionalInfo: string): Promise<CategoryOptions> {
     try {
-      const systemPrompt = `You are a financial assistant that helps parse bill information from text.
-Your task is to extract the following information from the bill text:
-1. Transaction date
-2. Description
-3. Amount and currency
-4. Account names (from the list of available accounts)
+      // Get all expense accounts
+      const expenseAccounts = getAccountsByType(AccountType.Expense);
+      const expenseCategories = expenseAccounts.map(account => account.name);
 
-Available accounts:
-${this.getAvailableAccounts()}
+      const prompt = `Please help categorize this merchant based on the following information:
 
-Return the information in JSON format with the following structure:
-{
-  "date": "YYYY-MM-DD",
-  "description": "string",
-  "entries": [
-    {
-      "account": "string (account name)",
-      "amount": {
-        "value": number,
-        "currency": "string (currency code)"
-      }
-    }
-  ]
-}`;
+Merchant Name: ${merchant}
+Additional Information: ${additionalInfo}
 
-      const response = await this.openaiAdapter.processMessage(systemPrompt, text);
+Available categories are:
+${expenseCategories.join('\n')}
+
+Please provide three category options in the following format:
+1. Primary Category: (choose the most appropriate category from the list above)
+2. Alternative Category: (choose another suitable category from the list above)
+3. Suggested New Category: (suggest a new category if none of the existing ones fit well)
+
+Respond in exactly this format, with each option on a new line.`;
+
+      const response = await this.openaiAdapter.processMessage(prompt, '');
+      const lines = response.trim().split('\n');
       
-      try {
-        const parsedResponse = JSON.parse(response);
-        
-        // Validate and convert the response
-        if (!this.isValidTransactionFormat(parsedResponse)) {
-          logger.error('Invalid transaction format from OpenAI response');
-          return null;
-        }
-
-        // Convert string date to Date object
-        const transaction: Transaction = {
-          ...parsedResponse,
-          date: new Date(parsedResponse.date),
-          metadata: {
-            source: 'email',
-            parsedAt: new Date().toISOString(),
-          },
-        };
-
-        return transaction;
-      } catch (error) {
-        logger.error('Error parsing OpenAI response:', error);
-        return null;
-      }
+      return {
+        primaryCategory: lines[0].replace('1. Primary Category:', '').trim(),
+        alternativeCategory: lines[1].replace('2. Alternative Category:', '').trim(),
+        suggestedNewCategory: lines[2].replace('3. Suggested New Category:', '').trim()
+      };
     } catch (error) {
-      logger.error('Error in parseBillText:', error);
-      return null;
+      logger.error('Error categorizing merchant:', error);
+      throw error;
     }
-  }
-
-  private getAvailableAccounts(): string {
-    // This should be replaced with actual account loading logic
-    return `
-Assets:
-- Assets:Cash
-- Assets:Bank:Checking
-- Assets:Bank:Savings
-- Assets:Alipay
-- Assets:WeChat
-
-Expenses:
-- Expenses:Food
-- Expenses:Transport
-- Expenses:Shopping
-- Expenses:Utilities
-- Expenses:Entertainment
-    `.trim();
-  }
-
-  private isValidTransactionFormat(data: any): boolean {
-    if (!data.date || !data.description || !Array.isArray(data.entries)) {
-      return false;
-    }
-
-    for (const entry of data.entries) {
-      if (!entry.account || !entry.amount || 
-          typeof entry.amount.value !== 'number' || 
-          !entry.amount.currency) {
-        return false;
-      }
-    }
-
-    return true;
   }
 }

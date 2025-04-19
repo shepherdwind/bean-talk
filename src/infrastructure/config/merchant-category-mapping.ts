@@ -1,6 +1,7 @@
 import { AccountName } from '../../domain/models/account';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from '../utils/logger';
 
 // Get configuration file path from environment variable or use default
 const configPath = process.env.MERCHANT_CATEGORY_CONFIG_PATH || 
@@ -86,15 +87,15 @@ export function findCategoryForMerchant(merchant: string): string | undefined {
 /**
  * Adds a merchant to the category mapping configuration file
  * @param merchant The merchant name to add
+ * @param category Optional category to set for the merchant
  */
-export function addMerchantToMapping(merchant: string): void {
+export function addMerchantToMapping(merchant: string, category?: string): void {
   try {
     // Read the current mapping
-    const configFile = fs.readFileSync(configPath, 'utf8');
-    const mapping = JSON.parse(configFile);
+    const mapping = loadConfigFromFile();
     
-    // Add the new merchant with an empty string as category (to be filled manually)
-    mapping[merchant] = '';
+    // Add the new merchant with the provided category or empty string
+    mapping[merchant] = category || '';
     
     // Write the updated mapping back to the file
     fs.writeFileSync(configPath, JSON.stringify(mapping, null, 2), 'utf8');
@@ -102,8 +103,8 @@ export function addMerchantToMapping(merchant: string): void {
     // Update the in-memory mapping
     merchantCategoryMappings = mapping;
     
-    console.log(`Added merchant "${merchant}" to category mapping with empty category for manual completion`);
-  } catch (error) {
-    console.error(`Error adding merchant to category mapping: ${error}`);
+    logger.info(`Added merchant "${merchant}" to category mapping${category ? ` with category "${category}"` : ' with empty category for manual completion'}`);
+  } catch (error: unknown) {
+    logger.error(`Error adding merchant to category mapping: ${error instanceof Error ? error.message : String(error)}`);
   }
 } 

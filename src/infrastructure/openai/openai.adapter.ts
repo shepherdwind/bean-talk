@@ -11,7 +11,7 @@ export class OpenAIAdapter {
   async processMessage(systemPrompt: string, userMessage: string): Promise<string> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }

@@ -9,12 +9,18 @@ import {
   updateMerchantCategoryMappingsIfNeeded,
   addMerchantToMapping,
 } from "../config/merchant-category-mapping";
+import { ApplicationEventEmitter, MerchantCategorizationEvent } from "../events/event-emitter";
+import { container } from "../utils";
 
 /**
  * Adapter for parsing DBS transaction alert emails
  */
 export class DBSEmailParser implements EmailParser {
-  constructor() {}
+  private eventEmitter: ApplicationEventEmitter;
+
+  constructor() {
+    this.eventEmitter = container.getByClass(ApplicationEventEmitter);
+  }
 
   /**
    * Checks if the email is a DBS transaction alert
@@ -66,11 +72,24 @@ export class DBSEmailParser implements EmailParser {
       const category = findCategoryForMerchant(merchant);
 
       if (!category) {
-        // If merchant not found in mapping, add it to the config file and exit
+        // If merchant not found in mapping, add it to the config file and emit event
         addMerchantToMapping(merchant);
         logger.info(
           `Merchant "${merchant}" not found in category mapping. Added to config for manual categorization.`
         );
+        
+        const timestamp = new Date().toISOString();
+        const merchantId = `${merchant.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}`;
+        
+        const event: MerchantCategorizationEvent = {
+          merchant,
+          merchantId,
+          timestamp,
+          email, 
+        };
+
+        // Emit an event for the new merchant that needs categorization
+        this.eventEmitter.emit('merchantNeedsCategorization', event);
         return null;
       }
 
