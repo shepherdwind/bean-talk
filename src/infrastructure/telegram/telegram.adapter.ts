@@ -11,6 +11,7 @@ export class TelegramAdapter {
   private nlpService: NLPService;
   private pendingCategorizations: Map<string, PendingCategorization> = new Map();
   private commandHandlers: CommandHandlers;
+  private truncatedIdMap: Map<string, string> = new Map(); // Map truncated IDs to full merchant IDs
 
   constructor() {
     this.logger = container.getByClass(Logger);
@@ -51,8 +52,14 @@ export class TelegramAdapter {
 
     // Handle AI categorization callback
     this.bot.action(/categorize_merchant_(.+)/, async (ctx) => {
-      const merchantId = ctx.match[1];
-      await this.commandHandlers.handleCategorizeMerchant(ctx, merchantId);
+      const truncatedId = ctx.match[1];
+      const fullMerchantId = this.truncatedIdMap.get(truncatedId);
+      if (!fullMerchantId) {
+        this.logger.error(`No mapping found for truncated ID: ${truncatedId}`);
+        await ctx.answerCbQuery('Error: Merchant ID not found');
+        return;
+      }
+      await this.commandHandlers.handleCategorizeMerchant(ctx, fullMerchantId);
     });
     
     this.logger.debug('Command handlers setup complete');
@@ -80,6 +87,18 @@ export class TelegramAdapter {
     }
   }
 
+  private getShortId(merchantId: string): string {
+    // Generate a short hash of the merchantId
+    let hash = 0;
+    for (let i = 0; i < merchantId.length; i++) {
+      const char = merchantId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    // Convert to base36 and take first 8 characters
+    return Math.abs(hash).toString(36).slice(0, 8);
+  }
+
   async sendNotification(message: string, merchantId?: string, categorizationData?: PendingCategorization): Promise<void> {
     if (!this.chatId) {
       this.logger.warn('No chat ID configured for Telegram notifications');
@@ -87,9 +106,16 @@ export class TelegramAdapter {
     }
 
     try {
-      const keyboard = merchantId ? Markup.inlineKeyboard([
-        Markup.button.callback('🤖 Categorize with AI', `categorize_merchant_${merchantId}`)
-      ]) : undefined;
+      let keyboard;
+      if (merchantId) {
+        // Generate a unique short ID
+        const shortId = this.getShortId(merchantId);
+        this.truncatedIdMap.set(shortId, merchantId);
+        
+        keyboard = Markup.inlineKeyboard([
+          Markup.button.callback('🤖 Categorize with AI', `categorize_merchant_${shortId}`)
+        ]);
+      }
 
       await this.bot.telegram.sendMessage(this.chatId, message, keyboard);
       

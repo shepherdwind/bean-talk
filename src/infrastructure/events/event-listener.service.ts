@@ -2,6 +2,7 @@ import { ApplicationEventEmitter, MerchantCategorizationEvent } from './event-em
 import { TelegramAdapter } from '../telegram/telegram.adapter';
 import { container } from '../utils';
 import { logger } from '../utils/logger';
+import { addMerchantToMapping } from '../config/merchant-category-mapping';
 
 interface MerchantCategorySelectedEvent {
   merchantId: string;
@@ -52,21 +53,14 @@ export class EventListenerService {
 
     this.eventEmitter.on('merchantCategorySelected', async (data: MerchantCategorySelectedEvent) => {
       try {
-        // Here you would implement the logic to save the category
-        // For example, updating a database or configuration file
-        logger.info(`Saving category for merchant: ${data.merchant}`, {
+        // Save the selected category to the merchant-category-mapping.json file
+        addMerchantToMapping(data.merchant, data.selectedCategory);
+        
+        logger.info(`Saved category for merchant: ${data.merchant}`, {
           merchantId: data.merchantId,
           selectedCategory: data.selectedCategory,
           timestamp: data.timestamp
         });
-
-        // TODO: Implement the actual saving logic here
-        // This could involve:
-        // 1. Updating a database
-        // 2. Updating a configuration file
-        // 3. Making an API call to another service
-        // 4. etc.
-
       } catch (error) {
         logger.error('Error saving merchant category:', error);
       }
