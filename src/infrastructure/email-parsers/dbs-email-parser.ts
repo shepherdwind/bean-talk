@@ -21,8 +21,8 @@ export class DBSEmailParser implements EmailParser {
    */
   canParse(email: Email): boolean {
     return (
-      /Card Transaction Alert/i.test(email.subject) &&
-      /ibanking\.alert@dbs\.com/i.test(email.from)
+      /Transaction Alert/i.test(email.subject) &&
+      /@dbs\.com/i.test(email.from)
     );
   }
 
@@ -35,7 +35,7 @@ export class DBSEmailParser implements EmailParser {
     }
 
     try {
-      const amountMatch = email.body.match(/Amount: (SGD|USD)(\d+(\.\d{2})?)/i);
+      const amountMatch = email.body.match(/Amount: (SGD|USD)(\d+(\.\d{1,2})?)/i);
       if (!amountMatch) {
         logger.warn("Failed to extract amount from DBS transaction email");
         return null;

@@ -25,9 +25,9 @@ export class AutomationService {
       this.logger.info('Starting scheduled bill check...');
       
       // Fetch unread emails that might contain bills
-      this.logger.info('Fetching emails with query: subject:(Card Transaction Alert)');
+      this.logger.info('Fetching emails with query: from:(dbs.com)');
       const emails = await this.gmailAdapter.fetchUnreadEmails(
-        'subject:(Card Transaction Alert)'
+        'from:*@dbs.com'
       );
 
       this.logger.info(`Found ${emails.length} potential bill emails`);

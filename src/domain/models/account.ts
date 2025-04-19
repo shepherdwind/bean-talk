@@ -19,6 +19,7 @@ export enum AccountName {
   ExpensesEducationKindergarten = 'Expenses:Education:Kindergarten',
   ExpensesFeesWires = 'Expenses:Fees:Wires',
   ExpensesFood = 'Expenses:Food',
+  ExpensesFoodOnline = 'Expenses:Food:Online',
   ExpensesFoodDining = 'Expenses:Food:Dining',
   ExpensesHealthDental = 'Expenses:Health:Dental',
   ExpensesHealthEyes = 'Expenses:Health:Eyes',
