@@ -36,13 +36,25 @@ jobs:
       - name: Check if version changed
         id: check-version
         run: |
-          git fetch --prune --unshallow || true
-          PREV_VERSION=$(git show HEAD~1:package.json 2>/dev/null | node -p "require('./package.json').version" || echo "none")
-          if [ "$PREV_VERSION" != "${{ env.VERSION }}" ]; then
+          # Get the current version from package.json
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          
+          # Try to get the previous version from the last commit
+          if git show HEAD~1:package.json > /dev/null 2>&1; then
+            PREV_VERSION=$(git show HEAD~1:package.json | node -p "require('./package.json').version")
+          else
+            PREV_VERSION="none"
+          fi
+          
+          # Compare versions and set environment variable
+          if [ "$PREV_VERSION" != "$CURRENT_VERSION" ]; then
             echo "VERSION_CHANGED=true" >> $GITHUB_ENV
           else
             echo "VERSION_CHANGED=false" >> $GITHUB_ENV
           fi
+          
+          echo "Current version: $CURRENT_VERSION"
+          echo "Previous version: $PREV_VERSION"
 
       - name: Log in to the Container registry
         if: env.VERSION_CHANGED == 'true'
