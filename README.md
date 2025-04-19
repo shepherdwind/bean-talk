@@ -118,6 +118,27 @@ Create a `.env` file in the root directory and add necessary environment variabl
    - Write tests for new functionality
    - Submit a pull request with a clear description of changes
 
+## Configuration
+
+### Merchant Category Mapping
+
+The application uses a JSON configuration file to map merchant names to account categories. By default, the configuration file is located at `config/merchant-category-mapping.json` in the project root directory.
+
+You can customize the location of the configuration file by setting the `MERCHANT_CATEGORY_CONFIG_PATH` environment variable:
+
+```bash
+# Linux/macOS
+export MERCHANT_CATEGORY_CONFIG_PATH=/path/to/your/merchant-category-mapping.json
+
+# Windows (Command Prompt)
+set MERCHANT_CATEGORY_CONFIG_PATH=C:\path\to\your\merchant-category-mapping.json
+
+# Windows (PowerShell)
+$env:MERCHANT_CATEGORY_CONFIG_PATH = "C:\path\to\your\merchant-category-mapping.json"
+```
+
+The application will automatically detect changes to the configuration file and reload it when needed.
+
 ## License
 
 MIT License

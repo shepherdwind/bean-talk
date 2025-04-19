@@ -1,104 +1,109 @@
 import { AccountName } from '../../domain/models/account';
+import * as fs from 'fs';
+import * as path from 'path';
 
-export interface MerchantCategoryMapping {
-  merchant: string;
-  category: AccountName;
-  description?: string;
+// Get configuration file path from environment variable or use default
+const configPath = process.env.MERCHANT_CATEGORY_CONFIG_PATH || 
+  path.join(process.cwd(), 'config', 'merchant-category-mapping.json');
+
+// Track the last modification time
+let lastModifiedTime = 0;
+
+// Define the type for the merchant category mapping
+type MerchantCategoryMap = Record<string, string>;
+
+// Function to load configuration from file
+function loadConfigFromFile(): MerchantCategoryMap {
+  try {
+    console.log(`Loading merchant category mapping from: ${configPath}`);
+    const configFile = fs.readFileSync(configPath, 'utf8');
+    return JSON.parse(configFile) as MerchantCategoryMap;
+  } catch (error) {
+    console.error(`Error loading merchant category mapping from ${configPath}:`, error);
+    return {};
+  }
 }
 
-export const merchantCategoryMappings: MerchantCategoryMapping[] = [
-  // Education
-  { merchant: 'PARIPOSA PRIVATE LIMITED', category: AccountName.ExpensesEducationKindergarten },
-  { merchant: 'PAP COMMUNITY FOUNDATION', category: AccountName.ExpensesEducationKindergarten },
+// Function to check if the configuration file has been updated
+function isConfigUpdated(): boolean {
+  try {
+    const stats = fs.statSync(configPath);
+    const currentModifiedTime = stats.mtimeMs;
+    
+    if (currentModifiedTime > lastModifiedTime) {
+      lastModifiedTime = currentModifiedTime;
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error(`Error checking config file modification time for ${configPath}:`, error);
+    return false;
+  }
+}
 
-  // Shopping
-  { merchant: 'TOP-UP TO PAYLAH!', category: AccountName.ExpensesShoppingPayla },
-  { merchant: 'NTUC FP-CLEMENTI A', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'NTUC FAIRPRICE ONLINE', category: AccountName.ExpensesShoppingSupermarket },
-  { merchant: 'SAFRA-TOA PAYOH', category: AccountName.ExpensesShoppingKids },
-  { merchant: 'SAFRA - JURONG CLUB', category: AccountName.ExpensesShoppingKids },
-  { merchant: 'SAFRA PUNGGOL CLUB', category: AccountName.ExpensesShoppingKids },
-  { merchant: 'OPENAI', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'GIANT-BEAUTY WORLD', category: AccountName.ExpensesShoppingSupermarket },
-  { merchant: 'MCDONALD\'S (TPS)', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'BREADTALK-CM', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'DIGINUT PTE LTD', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'FAIRPRICE FINEST-BT', category: AccountName.ExpensesShoppingSupermarket },
-  { merchant: 'A-ONE SIGNATURE - WML', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'POLAR PUFFS & CAKES', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'FOUR LEAVES', category: AccountName.ExpensesShoppingOffline },
-  { merchant: '7 ELEVEN', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'TIMBRE+', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'U STARS - SUPERMARKET', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'SHENGSIONG', category: AccountName.ExpensesShoppingSupermarket },
-  { merchant: 'JAPAN HOME (RETAIL)', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'KOPITIAM', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'KIZTOPIA CCK PTE LTD', category: AccountName.ExpensesShoppingKids },
-  { merchant: 'ADAMO ENTERPRISE', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'ACTIONCITY MBS', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'SWEE HENG BAKERY', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'TAKASHIMAYA', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'SBTB STALL', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'BEVERAGES', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'HEAVENLY WANG', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'WWW.OPEN.GOV.SG', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'LAO JIANG SUPERIOR SOU', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'NET*SHEER TECHNOLOGY', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'IPPUDO', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'RASAPURA', category: AccountName.ExpensesShoppingOffline },
-  { merchant: 'BBQ BOX', category: AccountName.ExpensesFood },
-  { merchant: 'POKKA PTE LTD', category: AccountName.ExpensesShoppingOffline },
+// Function to update configuration if the file has changed
+export function updateMerchantCategoryMappingsIfNeeded(): void {
+  if (isConfigUpdated()) {
+    merchantCategoryMappings = loadConfigFromFile();
+    console.log('Merchant category mappings updated from file');
+  }
+}
 
-  // Food
-  { merchant: 'KOUFU PTE LTD', category: AccountName.ExpensesFood },
-  { merchant: 'NET*DINGTELE', category: AccountName.ExpensesFood },
-  { merchant: 'CAKE AVENUE PTE LTD', category: AccountName.ExpensesFood },
+// Load initial configuration
+export let merchantCategoryMappings: MerchantCategoryMap = loadConfigFromFile();
 
-  // Transport
-  { merchant: 'EZL.ATU', category: AccountName.ExpensesTransportEzLink },
-  { merchant: 'BUS/MRT', category: AccountName.ExpensesTransportBus },
-  { merchant: 'COMFORT/CITYCAB TAXI', category: AccountName.ExpensesTransportTaxi },
-  { merchant: 'GRAB RIDES-EC', category: AccountName.ExpensesTransportGrab },
-  { merchant: 'GRAB*', category: AccountName.ExpensesTransportGrab },
-
-  // Housing
-  { merchant: '115-26044-8', category: AccountName.ExpensesHousingRent },
-
-  // Utilities
-  { merchant: 'SP DIGITAL', category: AccountName.ExpensesUtilities },
-
-  // Investment
-  { merchant: 'DEPNEW3', category: AccountName.AssetsSGDMoomoo },
-  { merchant: 'SCL:99190900601:I-BANK', category: AccountName.AssetsSGDBitcoin },
-
-  // Cash
-  { merchant: 'ATM Cash Withdrawal', category: AccountName.ExpensesCash },
-
-  // Insurance
-  { merchant: 'INCOME INSURANCE LIMITED', category: AccountName.ExpensesInsurance },
-  { merchant: 'INTEGRATED HEALTH PLANS PTE LTD', category: AccountName.ExpensesInsurance },
-
-  // Sport
-  { merchant: 'ACTIVESG DD', category: AccountName.ExpensesSportActivieSG },
-
-  // Income
-  { merchant: 'SHOPEE SINGAPORE PTE', category: AccountName.IncomeSalary },
-  { merchant: 'DBS VISA DEBIT CASHBACK', category: AccountName.IncomeBankCashback },
-
-  // Tax
-  { merchant: 'IRAS', category: AccountName.ExpensesTaxIncome },
-
-  // Wife's expenses
-  { merchant: 'ZOU QIAOLIN', category: AccountName.ExpensesShoppingWife },
-  { merchant: '271-384276-4', category: AccountName.ExpensesShoppingWife },
-];
+// Initialize last modification time
+try {
+  const stats = fs.statSync(configPath);
+  lastModifiedTime = stats.mtimeMs;
+} catch (error) {
+  console.error(`Error getting initial file modification time for ${configPath}:`, error);
+}
 
 /**
  * Helper function to find the category for a merchant
  */
-export function findCategoryForMerchant(merchant: string): AccountName | undefined {
-  const mapping = merchantCategoryMappings.find(m => 
-    merchant.includes(m.merchant) || m.merchant.includes(merchant)
-  );
-  return mapping?.category;
+export function findCategoryForMerchant(merchant: string): string | undefined {
+  // Check if the configuration has been updated
+  updateMerchantCategoryMappingsIfNeeded();
+  
+  // First try exact match
+  if (merchantCategoryMappings[merchant]) {
+    return merchantCategoryMappings[merchant];
+  }
+  
+  // Then try partial match
+  for (const [key, value] of Object.entries(merchantCategoryMappings)) {
+    if (merchant.includes(key) || key.includes(merchant)) {
+      return value;
+    }
+  }
+  
+  return undefined;
+}
+
+/**
+ * Adds a merchant to the category mapping configuration file
+ * @param merchant The merchant name to add
+ */
+export function addMerchantToMapping(merchant: string): void {
+  try {
+    // Read the current mapping
+    const configFile = fs.readFileSync(configPath, 'utf8');
+    const mapping = JSON.parse(configFile);
+    
+    // Add the new merchant with an empty string as category (to be filled manually)
+    mapping[merchant] = '';
+    
+    // Write the updated mapping back to the file
+    fs.writeFileSync(configPath, JSON.stringify(mapping, null, 2), 'utf8');
+    
+    // Update the in-memory mapping
+    merchantCategoryMappings = mapping;
+    
+    console.log(`Added merchant "${merchant}" to category mapping with empty category for manual completion`);
+  } catch (error) {
+    console.error(`Error adding merchant to category mapping: ${error}`);
+  }
 } 

@@ -69,10 +69,6 @@ export class AutomationService {
       transaction.metadata = {
         ...transaction.metadata,
         source: 'gmail',
-        emailId: email.id,
-        emailSubject: email.subject,
-        emailFrom: email.from,
-        emailDate: email.date,
       };
 
       // Save the transaction

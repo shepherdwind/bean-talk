@@ -1,9 +1,14 @@
-import { Email } from '../gmail/gmail.adapter';
-import { Transaction, Entry } from '../../domain/models/transaction';
-import { Account, AccountName } from '../../domain/models/account';
-import { AccountType, Amount, Currency } from '../../domain/models/types';
-import { EmailParser } from './email-parser.interface';
-import { logger } from '../utils/logger';
+import { Email } from "../gmail/gmail.adapter";
+import { Transaction, Entry } from "../../domain/models/transaction";
+import { AccountName } from "../../domain/models/account";
+import { Amount, Currency } from "../../domain/models/types";
+import { EmailParser } from "./email-parser.interface";
+import { logger } from "../utils/logger";
+import {
+  findCategoryForMerchant,
+  updateMerchantCategoryMappingsIfNeeded,
+  addMerchantToMapping,
+} from "../config/merchant-category-mapping";
 
 /**
  * Adapter for parsing DBS transaction alert emails
@@ -32,26 +37,42 @@ export class DBSEmailParser implements EmailParser {
     try {
       const amountMatch = email.body.match(/Amount: (SGD|USD)(\d+(\.\d{2})?)/i);
       if (!amountMatch) {
-        logger.warn('Failed to extract amount from DBS transaction email');
+        logger.warn("Failed to extract amount from DBS transaction email");
         return null;
       }
-      
+
       const currency = amountMatch[1].toUpperCase() as Currency;
       const amountStr = amountMatch[2];
-      const dateStr = this.extractValue(email.body, /Date & Time: (\d{2} [A-Za-z]{3} \d{2}:\d{2}) \(SGT\)/i);
+      const dateStr = this.extractValue(
+        email.body,
+        /Date & Time: (\d{2} [A-Za-z]{3} \d{2}:\d{2}) \(SGT\)/i
+      );
       const merchant = this.extractValue(email.body, /To: ([^\n]+)/i);
       const cardInfo = this.extractValue(email.body, /From: ([^\n]+)/i);
 
       if (!dateStr || !merchant) {
-        logger.warn('Failed to extract required DBS transaction information');
+        logger.warn("Failed to extract required DBS transaction information");
         return null;
       }
 
       // Parse date
       const date = this.parseDate(dateStr);
-      
+
       // Parse amount
       const amount = this.parseAmount(amountStr, currency);
+
+      // Get merchant category from mapping
+      updateMerchantCategoryMappingsIfNeeded();
+      const category = findCategoryForMerchant(merchant);
+
+      if (!category) {
+        // If merchant not found in mapping, add it to the config file and exit
+        addMerchantToMapping(merchant);
+        logger.info(
+          `Merchant "${merchant}" not found in category mapping. Added to config for manual categorization.`
+        );
+        return null;
+      }
 
       // Create transaction entries
       const entries: Entry[] = [
@@ -60,16 +81,16 @@ export class DBSEmailParser implements EmailParser {
           amount: amount,
           metadata: {
             merchant,
-            cardInfo
-          }
+            cardInfo,
+          },
         },
         {
-          account: AccountName.ExpensesFood,
+          account: category as AccountName,
           amount: {
             ...amount,
-            value: -amount.value // Negative for expense
-          }
-        }
+            value: -amount.value, // Negative for expense
+          },
+        },
       ];
 
       return {
@@ -78,10 +99,10 @@ export class DBSEmailParser implements EmailParser {
         entries,
         metadata: {
           emailId: email.id,
-        }
+        },
       };
     } catch (error) {
-      logger.error('Error parsing DBS email:', error);
+      logger.error("Error parsing DBS email:", error);
       return null;
     }
   }
@@ -93,19 +114,35 @@ export class DBSEmailParser implements EmailParser {
 
   private parseDate(dateStr: string): Date {
     // Parse date in format "DD MMM HH:mm" (e.g., "18 Apr 11:26")
-    const [day, month, time] = dateStr.split(' ');
-    const [hours, minutes] = time.split(':');
-    
+    const [day, month, time] = dateStr.split(" ");
+    const [hours, minutes] = time.split(":");
+
     // Map month abbreviation to month number (0-11)
     const monthMap: { [key: string]: number } = {
-      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-      'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+      Jan: 0,
+      Feb: 1,
+      Mar: 2,
+      Apr: 3,
+      May: 4,
+      Jun: 5,
+      Jul: 6,
+      Aug: 7,
+      Sep: 8,
+      Oct: 9,
+      Nov: 10,
+      Dec: 11,
     };
-    
+
     // Create date with current year
     const year = new Date().getFullYear();
-    const date = new Date(year, monthMap[month], parseInt(day), parseInt(hours), parseInt(minutes));
-    
+    const date = new Date(
+      year,
+      monthMap[month],
+      parseInt(day),
+      parseInt(hours),
+      parseInt(minutes)
+    );
+
     return date;
   }
 
@@ -113,7 +150,7 @@ export class DBSEmailParser implements EmailParser {
     const value = parseFloat(amountStr);
     return {
       value,
-      currency
+      currency,
     };
   }
 }
