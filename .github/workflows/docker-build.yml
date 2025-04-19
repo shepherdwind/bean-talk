@@ -2,13 +2,11 @@ name: Docker Build and Push
 
 on:
   push:
-    branches: [ "main" ]
-    paths:
-      - 'package.json'
-      - 'Dockerfile'
-      - '.github/workflows/docker-build.yml'
-      - 'src/**'
-      - 'public/**'
+    branches: ['main']
+    tags:
+      - 'v*'
+  pull_request:
+    branches: ['main']
 
 env:
   REGISTRY: ghcr.io
@@ -24,55 +22,67 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Get package.json version
+      - name: Get package version
         id: package-version
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-      - name: Check if version changed
+      - name: Check version change
         id: check-version
         run: |
-          # Get the current version from package.json
+          # Get current version
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          
-          # Get the previous version from the last commit
-          git fetch origin main
-          PREV_VERSION=$(git show origin/main:package.json | node -p "require('./package.json').version" || echo "none")
-          
-          # Compare versions and set environment variable
-          if [ "$PREV_VERSION" != "$CURRENT_VERSION" ]; then
-            echo "VERSION_CHANGED=true" >> $GITHUB_ENV
-          else
-            echo "VERSION_CHANGED=false" >> $GITHUB_ENV
+
+          # Try to get previous version, default to "none" if not available
+          git fetch origin main || true
+          OLD_VERSION="none"
+          if git rev-parse HEAD^ >/dev/null 2>&1; then
+            git checkout HEAD^ package.json || true
+            OLD_VERSION=$(node -p "require('./package.json').version" || echo "none")
+            git checkout HEAD package.json
           fi
-          
-          echo "Current version: $CURRENT_VERSION"
-          echo "Previous version: $PREV_VERSION"
+
+          # Compare versions
+          if [ "$OLD_VERSION" = "$CURRENT_VERSION" ]; then
+            echo "Version unchanged, skipping build"
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version changed from $OLD_VERSION to $CURRENT_VERSION, proceeding with build"
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.check-version.outputs.should_build == 'true'
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to the Container registry
-        if: env.VERSION_CHANGED == 'true'
+        if: steps.check-version.outputs.should_build == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        if: env.VERSION_CHANGED == 'true'
-        uses: docker/setup-buildx-action@v3
+      - name: Extract metadata (tags, labels) for Docker
+        if: steps.check-version.outputs.should_build == 'true'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ steps.package-version.outputs.version }}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
 
       - name: Build and push Docker image
-        if: env.VERSION_CHANGED == 'true'
+        if: steps.check-version.outputs.should_build == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ env.VERSION }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max 
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }} 
