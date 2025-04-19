@@ -75,7 +75,7 @@ Please do not reply to this email as it is auto generated`;
         });
 
         // Check second entry (Expense)
-        expect(result.entries[1].account).toBe(AccountName.ExpensesFood);
+        expect(result.entries[1].account).toBe(AccountName.ExpensesShoppingOnline);
         expect(result.entries[1].amount).toEqual({
           value: -20.00,
           currency: Currency.USD
