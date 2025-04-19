@@ -2,10 +2,15 @@ import { Transaction } from '../models/transaction';
 import { Account } from '../models/account';
 import { Amount, Currency } from '../models/types';
 import { OpenAIAdapter } from '../../infrastructure/openai/openai.adapter';
-import { logger } from '../../infrastructure/utils/logger';
+import { logger, container } from '../../infrastructure/utils';
 
 export class NLPService {
-  constructor(private openaiAdapter: OpenAIAdapter) {}
+  private openaiAdapter: OpenAIAdapter;
+
+  constructor(openaiAdapter?: OpenAIAdapter) {
+    // 如果提供了直接依赖，使用它；否则从容器通过类名获取
+    this.openaiAdapter = openaiAdapter || container.getByClass(OpenAIAdapter);
+  }
 
   async parseBillText(text: string): Promise<Transaction | null> {
     try {

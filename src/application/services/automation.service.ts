@@ -1,15 +1,28 @@
 import { GmailAdapter, Email } from '../../infrastructure/gmail/gmail.adapter';
 import { BillParserService } from '../../domain/services/bill-parser.service';
 import { AccountingService } from '../../domain/services/accounting.service';
-import { ILogger } from '../../infrastructure/utils';
+import { ILogger, container, Logger } from '../../infrastructure/utils';
 
 export class AutomationService {
+  private gmailAdapter: GmailAdapter;
+  private billParserService: BillParserService;
+  private accountingService: AccountingService;
+  private logger: ILogger;
+
   constructor(
-    private gmailAdapter: GmailAdapter,
-    private billParserService: BillParserService,
-    private accountingService: AccountingService,
-    private logger: ILogger
-  ) {}
+    gmailAdapter?: GmailAdapter,
+    billParserService?: BillParserService,
+    accountingService?: AccountingService,
+    logger?: ILogger
+  ) {
+    // 使用提供的依赖，或者从容器通过类名获取
+    this.gmailAdapter = gmailAdapter || container.getByClass(GmailAdapter);
+    this.billParserService = billParserService || container.getByClass(BillParserService);
+    this.accountingService = accountingService || container.getByClass(AccountingService);
+    
+    // Use getByClass to get logger from the container for consistency
+    this.logger = logger || container.getByClass(Logger);
+  }
 
   async scheduledCheck(): Promise<void> {
     try {

@@ -20,7 +20,7 @@ export class Logger implements ILogger {
   private static instance: Logger;
   private logLevel: LogLevel = LogLevel.INFO;
 
-  private constructor() {}
+  constructor() {}
 
   public static getInstance(): Logger {
     if (!Logger.instance) {
