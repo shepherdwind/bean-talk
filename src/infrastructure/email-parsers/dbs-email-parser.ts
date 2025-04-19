@@ -77,10 +77,7 @@ export class DBSEmailParser implements EmailParser {
         description: `${merchant}`,
         entries,
         metadata: {
-          source: 'email',
-          provider: 'DBS',
           emailId: email.id,
-          cardInfo
         }
       };
     } catch (error) {

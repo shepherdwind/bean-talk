@@ -82,10 +82,7 @@ Please do not reply to this email as it is auto generated`;
         });
 
         expect(result.metadata).toEqual({
-          source: 'email',
-          provider: 'DBS',
           emailId: 'test-id',
-          cardInfo: 'DBS/POSB card ending 8558'
         });
       }
     });

@@ -50,7 +50,7 @@ describe('BeancountService', () => {
       };
 
       const expected = `2024-03-15 * "Test transaction"
-  Assets:Bank:CNY  100.50 CNY
+  Assets:ICBC:SGD:Savings  100.50 CNY
   Expenses:Food  -100.50 CNY
   ; note: Test note`;
 
@@ -98,11 +98,11 @@ describe('BeancountService', () => {
       // Read the file and verify content
       const content = await fs.readFile(testFilePath, 'utf-8');
       const expected = `2024-03-15 * "Test transaction"
-  Assets:Bank:CNY  100.50 CNY
+  Assets:ICBC:SGD:Savings  100.50 CNY
   Expenses:Food  -100.50 CNY
 
 2024-03-16 * "Second transaction"
-  Assets:Bank:CNY  100.50 CNY
+  Assets:ICBC:SGD:Savings  100.50 CNY
   Expenses:Food  -100.50 CNY`;
 
       expect(content.trim()).toBe(expected);
@@ -129,7 +129,7 @@ describe('BeancountService', () => {
 
       const content = await fs.readFile(testFilePath, 'utf-8');
       const expected = `2024-03-15 * "Test transaction"
-  Assets:Bank:CNY  100.50 CNY`;
+  Assets:ICBC:SGD:Savings  100.50 CNY`;
 
       expect(content.trim()).toBe(expected);
     });

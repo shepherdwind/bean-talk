@@ -34,3 +34,4 @@ token.json
 
 # Beancount files
 *.beancount
+bill
