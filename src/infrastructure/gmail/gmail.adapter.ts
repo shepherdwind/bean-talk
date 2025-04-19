@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import { createServer } from 'http';
 import { URL } from 'url';
 import { extractEmailHeaders, extractEmailBody } from './email.utils';
+import { logger } from '../utils/logger';
 
 export interface GmailCredentials {
   client_id: string;
@@ -52,20 +53,20 @@ export class GmailAdapter {
   }
 
   async init(): Promise<void> {
-    console.log('Initializing Gmail adapter...');
-    console.log('Setting credentials...');
+    logger.info('Initializing Gmail adapter...');
+    logger.info('Setting credentials...');
     this.auth.setCredentials(this.tokens);
-    console.log('Credentials set successfully');
+    logger.info('Credentials set successfully');
     
     // Handle token refresh
     this.auth.on('tokens', async (tokens) => {
-      console.log('Token refresh event received');
+      logger.info('Token refresh event received');
       if (tokens.refresh_token) {
-        console.log('Received new refresh token, saving...');
+        logger.info('Received new refresh token, saving...');
         this.tokens.refresh_token = tokens.refresh_token;
       }
       if (tokens.access_token) {
-        console.log('Received new access token, updating...');
+        logger.info('Received new access token, updating...');
         this.tokens.access_token = tokens.access_token;
         this.tokens.expiry_date = tokens.expiry_date || 0;
       }
@@ -79,9 +80,9 @@ export class GmailAdapter {
         const expiryDate = tokens.expiry_date || 0;
         const refreshTime = expiryDate - Date.now() - 5 * 60 * 1000;
         if (refreshTime > 0) {
-          console.log(`Scheduling token refresh in ${refreshTime}ms`);
+          logger.info(`Scheduling token refresh in ${refreshTime}ms`);
           setTimeout(() => {
-            console.log('Refreshing access token...');
+            logger.info('Refreshing access token...');
             this.auth.refreshAccessToken();
           }, refreshTime);
         }
@@ -90,15 +91,15 @@ export class GmailAdapter {
 
     // Verify the auth is working
     try {
-      console.log('Verifying Gmail API connection...');
+      logger.info('Verifying Gmail API connection...');
       const response = await this.gmail.users.getProfile({
         auth: this.auth,
         userId: 'me'
       });
-      console.log('Gmail API connection verified successfully');
-      console.log('Connected as:', response.data.emailAddress);
+      logger.info('Gmail API connection verified successfully');
+      logger.info('Connected as:', response.data.emailAddress);
     } catch (error) {
-      console.error('Error verifying Gmail API connection:', error);
+      logger.error('Error verifying Gmail API connection:', error);
       throw error;
     }
   }
@@ -107,7 +108,7 @@ export class GmailAdapter {
    * Generate OAuth URL for authorization
    */
   generateAuthUrl(): string {
-    console.log('Generating OAuth URL for authorization...');
+    logger.info('Generating OAuth URL for authorization...');
     const url = this.auth.generateAuthUrl({
       access_type: 'offline',
       scope: [
@@ -116,8 +117,8 @@ export class GmailAdapter {
       ],
       prompt: 'consent'
     });
-    console.log('Please visit this URL to authorize the application:');
-    console.log(url);
+    logger.info('Please visit this URL to authorize the application:');
+    logger.debug(url);
     return url;
   }
 
@@ -125,7 +126,7 @@ export class GmailAdapter {
    * Get initial tokens through OAuth flow
    */
   async getInitialTokens(): Promise<GmailTokens> {
-    console.log('Starting OAuth flow to get initial tokens...');
+    logger.info('Starting OAuth flow to get initial tokens...');
     return new Promise((resolve, reject) => {
       const server = createServer(async (req, res) => {
         try {
@@ -140,18 +141,18 @@ export class GmailAdapter {
             return;
           }
 
-          console.log('Received authorization code, exchanging for tokens...');
+          logger.info('Received authorization code, exchanging for tokens...');
           const { tokens } = await this.auth.getToken(code);
           this.tokens = tokens as GmailTokens;
           await this.saveTokens(this.tokens);
-          console.log('Successfully obtained and saved tokens');
+          logger.info('Successfully obtained and saved tokens');
 
           res.writeHead(200);
           res.end('Authorization successful! You can close this window.');
           server.close();
           resolve(this.tokens);
         } catch (error) {
-          console.error('Error during authorization:', error);
+          logger.error('Error during authorization:', error);
           res.writeHead(500);
           res.end('Error during authorization');
           server.close();
@@ -161,7 +162,7 @@ export class GmailAdapter {
 
       const redirectUri = new URL(this.credentials.redirect_uri);
       server.listen(redirectUri.port || 80, () => {
-        console.log(`OAuth server listening on port ${redirectUri.port || 80}`);
+        logger.info(`OAuth server listening on port ${redirectUri.port || 80}`);
       });
     });
   }
@@ -188,7 +189,7 @@ export class GmailAdapter {
 
       return emails;
     } catch (error) {
-      console.error('Error fetching emails:', error);
+      logger.error('Error fetching emails:', error);
       throw error;
     }
   }
@@ -204,7 +205,7 @@ export class GmailAdapter {
         },
       });
     } catch (error) {
-      console.error('Error marking email as read:', error);
+      logger.error('Error marking email as read:', error);
       throw error;
     }
   }
@@ -226,19 +227,19 @@ export class GmailAdapter {
         body,
       };
     } catch (error) {
-      console.error('Error getting email details:', error);
+      logger.error('Error getting email details:', error);
       return null;
     }
   }
 
   private async saveTokens(tokens: GmailTokens): Promise<void> {
     try {
-      console.log('Saving tokens to token.json...');
+      logger.info('Saving tokens to token.json...');
       await fs.writeFile('token.json', JSON.stringify(tokens, null, 2));
-      console.log('Tokens saved successfully');
+      logger.info('Tokens saved successfully');
     } catch (error) {
-      console.error('Error saving tokens:', error);
+      logger.error('Error saving tokens:', error);
       throw error;
     }
   }
-} 
+}

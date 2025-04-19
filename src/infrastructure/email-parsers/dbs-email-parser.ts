@@ -3,6 +3,7 @@ import { Transaction, Entry } from '../../domain/models/transaction';
 import { Account, AccountName } from '../../domain/models/account';
 import { AccountType, Amount, Currency } from '../../domain/models/types';
 import { EmailParser } from './email-parser.interface';
+import { logger } from '../utils/logger';
 
 /**
  * Adapter for parsing DBS transaction alert emails
@@ -31,7 +32,7 @@ export class DBSEmailParser implements EmailParser {
     try {
       const amountMatch = email.body.match(/Amount: (SGD|USD)(\d+(\.\d{2})?)/i);
       if (!amountMatch) {
-        console.log('Failed to extract amount from DBS transaction email');
+        logger.warn('Failed to extract amount from DBS transaction email');
         return null;
       }
       
@@ -42,7 +43,7 @@ export class DBSEmailParser implements EmailParser {
       const cardInfo = this.extractValue(email.body, /From: ([^\n]+)/i);
 
       if (!dateStr || !merchant) {
-        console.log('Failed to extract required DBS transaction information');
+        logger.warn('Failed to extract required DBS transaction information');
         return null;
       }
 
@@ -83,7 +84,7 @@ export class DBSEmailParser implements EmailParser {
         }
       };
     } catch (error) {
-      console.error('Error parsing DBS email:', error);
+      logger.error('Error parsing DBS email:', error);
       return null;
     }
   }
@@ -118,4 +119,4 @@ export class DBSEmailParser implements EmailParser {
       currency
     };
   }
-} 
+}

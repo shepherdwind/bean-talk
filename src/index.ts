@@ -9,6 +9,7 @@ import { BeancountService } from './domain/services/beancount.service';
 import { AccountingService } from './domain/services/accounting.service';
 import { AutomationService } from './application/services/automation.service';
 import { BillParserService } from './domain/services/bill-parser.service';
+import { logger } from './infrastructure/utils/logger';
 
 // Load environment variables
 dotenv.config();
@@ -36,7 +37,7 @@ async function main() {
         await fs.readFile(process.env.GMAIL_TOKENS_PATH || '', 'utf-8')
       );
     } catch (error) {
-      console.log('No token.json found. Initializing Gmail authentication...');
+      logger.info('No token.json found. Initializing Gmail authentication...');
       const gmailAdapter = new GmailAdapter(credentials, {
         access_token: '',
         refresh_token: '',
@@ -46,11 +47,11 @@ async function main() {
       });
       
       const authUrl = gmailAdapter.generateAuthUrl();
-      console.log('Please visit this URL to authorize the application:');
-      console.log(authUrl);
+      logger.info('Please visit this URL to authorize the application:');
+      logger.info(authUrl);
       
       tokens = await gmailAdapter.getInitialTokens();
-      console.log('Gmail authentication successful!');
+      logger.info('Gmail authentication successful!');
     }
     
     // Initialize Gmail adapter
@@ -63,7 +64,8 @@ async function main() {
     const automationService = new AutomationService(
       gmailAdapter,
       billParserService,
-      accountingService
+      accountingService,
+      logger
     );
     
     // Initialize Telegram bot
@@ -72,11 +74,11 @@ async function main() {
     
     // Schedule Gmail bill check every 2 hours
     // cron.schedule('0 */2 * * *', async () => {
-    console.log('Running scheduled Gmail bill check...');
+    logger.info('Running scheduled Gmail bill check...');
     try {
       await automationService.scheduledCheck();
     } catch (error) {
-      console.error('Error in scheduled Gmail bill check:', error);
+      logger.error('Error in scheduled Gmail bill check:', error);
     }
     // });
     
@@ -85,17 +87,17 @@ async function main() {
       ctx.reply('Welcome to BeanTalk! Your personal finance assistant.');
     });
     
-    console.log('Starting bot...');
+    logger.info('Starting bot...');
     // Start the bot
     await bot.launch();
-    console.log('BeanTalk bot is running...');
+    logger.info('BeanTalk bot is running...');
     // Enable graceful stop
     process.once('SIGINT', () => bot.stop('SIGINT'));
     process.once('SIGTERM', () => bot.stop('SIGTERM'));
   } catch (error) {
-    console.error('Failed to start the application:', error);
+    logger.error('Failed to start the application:', error);
     process.exit(1);
   }
 }
 
-main(); 
+main();

@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { logger } from '../utils/logger';
 
 export class OpenAIAdapter {
   private openai: OpenAI;
@@ -21,8 +22,8 @@ export class OpenAIAdapter {
 
       return response.choices[0]?.message?.content || '';
     } catch (error) {
-      console.error('Error calling OpenAI API:', error);
+      logger.error('Error calling OpenAI API:', error);
       throw error;
     }
   }
-} 
+}

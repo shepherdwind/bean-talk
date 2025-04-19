@@ -1,46 +1,48 @@
 import { GmailAdapter, Email } from '../../infrastructure/gmail/gmail.adapter';
 import { BillParserService } from '../../domain/services/bill-parser.service';
 import { AccountingService } from '../../domain/services/accounting.service';
+import { ILogger } from '../../infrastructure/utils';
 
 export class AutomationService {
   constructor(
     private gmailAdapter: GmailAdapter,
     private billParserService: BillParserService,
-    private accountingService: AccountingService
+    private accountingService: AccountingService,
+    private logger: ILogger
   ) {}
 
   async scheduledCheck(): Promise<void> {
     try {
-      console.log('Starting scheduled bill check...');
+      this.logger.info('Starting scheduled bill check...');
       
       // Fetch unread emails that might contain bills
-      console.log('Fetching emails with query: subject:(Card Transaction Alert)');
+      this.logger.info('Fetching emails with query: subject:(Card Transaction Alert)');
       const emails = await this.gmailAdapter.fetchUnreadEmails(
         'subject:(Card Transaction Alert)'
       );
 
-      console.log(`Found ${emails.length} potential bill emails`);
+      this.logger.info(`Found ${emails.length} potential bill emails`);
 
       if (emails.length === 0) {
-        console.log('No bill emails found, finishing check');
+        this.logger.info('No bill emails found, finishing check');
         return;
       }
 
       for (const email of emails) {
         try {
-          console.log(`Starting to process email: ${email.subject} (${email.id})`);
+          this.logger.info(`Starting to process email: ${email.subject} (${email.id})`);
           await this.processBillEmail(email);
-          console.log(`Finished processing email: ${email.subject}`);
+          this.logger.info(`Finished processing email: ${email.subject}`);
         } catch (error) {
-          console.error(`Error processing email ${email.id}:`, error);
+          this.logger.error(`Error processing email ${email.id}:`, error);
           // Continue with next email even if one fails
           continue;
         }
       }
 
-      console.log('Finished scheduled bill check');
+      this.logger.info('Finished scheduled bill check');
     } catch (error) {
-      console.error('Error in scheduled check:', error);
+      this.logger.error('Error in scheduled check:', error);
       throw error;
     }
   }
@@ -66,9 +68,9 @@ export class AutomationService {
       // Mark the email as read
       await this.gmailAdapter.markAsRead(email.id);
 
-      console.log(`Successfully processed bill from email: ${email.subject}`);
+      this.logger.info(`Successfully processed bill from email: ${email.subject}`);
     } else {
-      console.log(`Could not extract bill information from email: ${email.subject}`);
+      this.logger.warn(`Could not extract bill information from email: ${email.subject}`);
     }
   }
-} 
+}

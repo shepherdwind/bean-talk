@@ -1,5 +1,6 @@
 import { Transaction } from '../models/transaction';
 import { BeancountService } from './beancount.service';
+import { logger } from '../../infrastructure/utils/logger';
 
 export class AccountingService {
   constructor(private beancountService: BeancountService) {}
@@ -8,8 +9,8 @@ export class AccountingService {
     try {
       await this.beancountService.appendTransaction(transaction);
     } catch (error) {
-      console.error('Error adding transaction:', error);
+      logger.error('Error adding transaction:', error);
       throw error;
     }
   }
-} 
+}

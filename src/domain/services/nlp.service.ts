@@ -2,6 +2,7 @@ import { Transaction } from '../models/transaction';
 import { Account } from '../models/account';
 import { Amount, Currency } from '../models/types';
 import { OpenAIAdapter } from '../../infrastructure/openai/openai.adapter';
+import { logger } from '../../infrastructure/utils/logger';
 
 export class NLPService {
   constructor(private openaiAdapter: OpenAIAdapter) {}
@@ -40,7 +41,7 @@ Return the information in JSON format with the following structure:
         
         // Validate and convert the response
         if (!this.isValidTransactionFormat(parsedResponse)) {
-          console.error('Invalid transaction format from OpenAI response');
+          logger.error('Invalid transaction format from OpenAI response');
           return null;
         }
 
@@ -56,11 +57,11 @@ Return the information in JSON format with the following structure:
 
         return transaction;
       } catch (error) {
-        console.error('Error parsing OpenAI response:', error);
+        logger.error('Error parsing OpenAI response:', error);
         return null;
       }
     } catch (error) {
-      console.error('Error in parseBillText:', error);
+      logger.error('Error in parseBillText:', error);
       return null;
     }
   }
@@ -99,4 +100,4 @@ Expenses:
 
     return true;
   }
-} 
+}
