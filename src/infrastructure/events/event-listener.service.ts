@@ -1,9 +1,14 @@
-import { ApplicationEventEmitter, MerchantCategorizationEvent } from './event-emitter';
-import { TelegramAdapter } from '../telegram/telegram.adapter';
-import { container } from '../utils';
-import { logger } from '../utils/logger';
-import { AccountingService } from '../../domain/services/accounting.service';
-import { formatDateToUTC8 } from '../utils/date.utils';
+import {
+  ApplicationEventEmitter,
+  MerchantCategorizationEvent,
+} from "./event-emitter";
+import { TelegramAdapter } from "../telegram/telegram.adapter";
+import { container } from "../utils";
+import { logger } from "../utils/logger";
+import { AccountingService } from "../../domain/services/accounting.service";
+import { formatDateToUTC8 } from "../utils/date.utils";
+import { MessageQueueService } from "./message-queue.service";
+import { EventTypes, getQueueEventName } from "./event-types";
 
 interface MerchantCategorySelectedEvent {
   merchantId: string;
@@ -13,7 +18,10 @@ interface MerchantCategorySelectedEvent {
 }
 
 export class EventListenerService {
+  private messageQueue: MessageQueueService;
+
   constructor() {
+    this.messageQueue = new MessageQueueService(this.eventEmitter);
     this.setupEventListeners();
   }
 
@@ -24,48 +32,84 @@ export class EventListenerService {
   private get telegramAdapter(): TelegramAdapter {
     return container.getByClass(TelegramAdapter);
   }
-  
+
   private get accountingService(): AccountingService {
     return container.getByClass(AccountingService);
   }
 
   private setupEventListeners(): void {
-    this.eventEmitter.on('merchantNeedsCategorization', async (data: MerchantCategorizationEvent) => {
-      try {
-        let message = `🔍 New Merchant Needs Categorization\n\n` +
-          `🏪 Merchant: ${data.merchant}\n` +
-          `💰 Amount: ${data.amount?.value} ${data.amount?.currency}\n` +
-          `⏰ Time: ${formatDateToUTC8(data.email?.date)}\n\n`;
-        
-        // Add email information if available
-        if (data.email) {
-          message += `📧 Email Details:\n` +
-            `📝 Subject: ${data.email.subject}\n` +
-            `📨 From: ${data.email.from}\n`;
-        }
-        
-        message += `\nPlease update the merchant category mapping in the configuration or use AI assistance.`;
-
-        await this.telegramAdapter.sendNotification(message, data.merchantId, data);
-        logger.info(`Sent notification for merchant categorization: ${data.merchant}`);
-      } catch (error) {
-        logger.error('Error sending merchant categorization notification:', error);
+    this.eventEmitter.on(
+      EventTypes.MERCHANT_NEEDS_CATEGORIZATION,
+      async (data: MerchantCategorizationEvent) => {
+        // Use merchantId as taskId for tracking
+        this.messageQueue.enqueue(
+          EventTypes.MERCHANT_NEEDS_CATEGORIZATION,
+          data,
+          data.merchantId
+        );
       }
-    });
+    );
 
-    this.eventEmitter.on('merchantCategorySelected', async (data: MerchantCategorySelectedEvent) => {
-      try {
-        // Save the selected category using AccountingService
-        this.accountingService.addMerchantToCategory(data.merchant, data.selectedCategory);
-        
+    this.eventEmitter.on(
+      EventTypes.MERCHANT_CATEGORY_SELECTED,
+      async (data: MerchantCategorySelectedEvent) => {
+        this.messageQueue.completeTask(data.merchantId);
+        if (!data.selectedCategory) {
+          logger.info(`Skipping categorization for merchant: ${data.merchant}`, {
+            merchantId: data.merchantId,
+            timestamp: data.timestamp,
+          });
+          return;
+        }
+
+        this.accountingService.addMerchantToCategory(
+          data.merchant,
+          data.selectedCategory
+        );
+
         logger.info(`Saved category for merchant: ${data.merchant}`, {
           merchantId: data.merchantId,
           selectedCategory: data.selectedCategory,
-          timestamp: data.timestamp
+          timestamp: data.timestamp,
         });
-      } catch (error) {
-        logger.error('Error saving merchant category:', error);
       }
-    });
+    );
+
+    // Setup queue event handlers
+    this.eventEmitter.on(
+      getQueueEventName(EventTypes.MERCHANT_NEEDS_CATEGORIZATION),
+      async (data: MerchantCategorizationEvent) => {
+        try {
+          let message =
+            `🔍 New Merchant Needs Categorization\n\n` +
+            `🏪 Merchant: ${data.merchant}\n` +
+            `💰 Amount: ${data.amount?.value} ${data.amount?.currency}\n` +
+            `⏰ Time: ${formatDateToUTC8(data.email?.date)}\n\n`;
+
+          if (data.email) {
+            message +=
+              `📧 Email Details:\n` +
+              `📝 Subject: ${data.email.subject}\n` +
+              `📨 From: ${data.email.from}\n`;
+          }
+
+          message += `\nPlease update the merchant category mapping in the configuration or use AI assistance.`;
+
+          await this.telegramAdapter.sendNotification(
+            message,
+            data.merchantId,
+            data
+          );
+          logger.info(
+            `Sent notification for merchant categorization: ${data.merchant}`
+          );
+        } catch (error) {
+          logger.error(
+            "Error sending merchant categorization notification:",
+            error
+          );
+        }
+      }
+    );
   }
 }

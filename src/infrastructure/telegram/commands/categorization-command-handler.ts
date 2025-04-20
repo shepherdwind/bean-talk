@@ -22,6 +22,7 @@ import {
   CategorizationMap, 
   CategorySelectionEventData 
 } from './categorization-types';
+import { EventTypes } from '../../events/event-types';
 
 export class CategorizationCommandHandler extends BaseCommandHandler {
   private nlpService: NLPService;
@@ -253,7 +254,7 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
       timestamp: new Date().toISOString()
     };
     
-    this.eventEmitter.emit('merchantCategorySelected', eventData);
+    this.eventEmitter.emit(EventTypes.MERCHANT_CATEGORY_SELECTED, eventData);
 
     await ctx.editMessageText(
       MESSAGES.CATEGORY_SELECTED(pendingCategorization.merchant, selectedCategory)
@@ -287,6 +288,13 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
 
     await ctx.editMessageText(MESSAGES.CATEGORIZATION_CANCELLED);
     
+    this.eventEmitter.emit(EventTypes.MERCHANT_CATEGORY_SELECTED, {
+      merchantId: pendingCategorization.merchantId,
+      merchant: pendingCategorization.merchant,
+      selectedCategory: null,
+      timestamp: new Date().toISOString()
+    });
+
     this.removePendingCategorization(merchantId);
     this.activeCategorizations.delete(chatId);
     this.categorizationMap.delete(shortId);

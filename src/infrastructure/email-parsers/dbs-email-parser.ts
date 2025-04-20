@@ -8,6 +8,7 @@ import { ApplicationEventEmitter, MerchantCategorizationEvent } from "../events/
 import { container } from "../utils";
 import { AccountingService } from "../../domain/services/accounting.service";
 import { extractTransactionData, TransactionData } from "./dbs-transaction-extractor";
+import { EventTypes } from '../events/event-types';
 
 /**
  * Interface for transaction creation parameters
@@ -112,8 +113,9 @@ export class DBSEmailParser implements EmailParser {
       }
     };
 
+    logger.info("Emitting merchant categorization event:", event.merchant, event.amount);
     // Emit an event for the new merchant that needs categorization
-    this.eventEmitter.emit('merchantNeedsCategorization', event);
+    this.eventEmitter.emit(EventTypes.MERCHANT_NEEDS_CATEGORIZATION, event);
   }
 
   /**

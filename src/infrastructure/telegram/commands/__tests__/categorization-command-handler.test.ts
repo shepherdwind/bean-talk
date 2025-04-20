@@ -5,6 +5,7 @@ import { NLPService } from '../../../../domain/services/nlp.service';
 import { ApplicationEventEmitter } from '../../../events/event-emitter';
 import { Logger } from '../../../utils';
 import { MESSAGES } from '../categorization-constants';
+import { EventTypes } from '../../../events/event-types';
 
 // Mock dependencies
 jest.mock('telegraf');
@@ -232,7 +233,7 @@ describe('CategorizationCommandHandler', () => {
 
       // Assert
       expect(ctx.answerCbQuery).not.toHaveBeenCalled(); // Should not be called on success
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith('merchantCategorySelected', expect.any(Object));
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(EventTypes.MERCHANT_CATEGORY_SELECTED, expect.any(Object));
       expect(ctx.editMessageText).toHaveBeenCalledWith(
         MESSAGES.CATEGORY_SELECTED('Test Merchant', selectedCategory)
       );
