@@ -109,7 +109,7 @@ We refer to your card transaction request dated 26/03/25.
 We are pleased to confirm that the transaction was completed.
 Date & Time: 26 Mar21:37(SGT)
 Amount: SGD12,000.00
-From: DBS/POSB card ending 8558
+From: My Account A/C ending 4267
 To: GAMMA.APP
 
 Please do not reply to this email as it is auto generated`;
@@ -145,7 +145,7 @@ Please do not reply to this email as it is auto generated`;
         });
         expect(result.entries[0].metadata).toEqual({
           merchant: 'GAMMA.APP',
-          cardInfo: 'DBS/POSB card ending 8558'
+          cardInfo: 'My Account A/C ending 4267'
         });
 
         // Check second entry (Expense)

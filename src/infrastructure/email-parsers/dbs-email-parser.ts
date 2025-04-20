@@ -22,6 +22,7 @@ interface TransactionCreationParams {
   cardInfo: string;
   category: AccountName;
   emailId: string;
+  account: AccountName;
 }
 
 /**
@@ -69,11 +70,22 @@ export class DBSEmailParser implements EmailParser {
       }
 
       // Create transaction entries
-      return this.createTransaction({ date, merchant, amount, currency, cardInfo, category, emailId: email.id });
+      return this.createTransaction({
+        date, merchant, amount, currency, cardInfo, category, emailId: email.id,
+        account: this.getAccountForMerchant(email.body)
+      });
     } catch (error) {
       logger.error("Error parsing DBS email:", error);
       return null;
     }
+  }
+  
+  private getAccountForMerchant(cardInfo: string): AccountName {
+    if (cardInfo.includes('ending 4267') || cardInfo.includes('ending 8558')) {
+      return AccountName.AssetsDBSSGDSaving;
+    }
+
+    return AccountName.AssetsDBSSGDWife;
   }
 
   /**
@@ -133,7 +145,7 @@ export class DBSEmailParser implements EmailParser {
     // Create transaction entries
     const entries: Entry[] = [
       {
-        account: AccountName.AssetsDBSSGDSaving,
+        account: params.account,
         amount: amountObj,
         metadata: {
           merchant,
@@ -156,6 +168,7 @@ export class DBSEmailParser implements EmailParser {
       metadata: {
         emailId,
         date,
+        cardInfo,
       },
     };
   }

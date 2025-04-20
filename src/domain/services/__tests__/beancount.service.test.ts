@@ -1,21 +1,22 @@
 import { BeancountService } from '../beancount.service';
 import { Transaction } from '../../models/transaction';
-import { Account, AccountName } from '../../models/account';
-import { Amount, AccountType, Currency } from '../../models/types';
+import { AccountName } from '../../models/account';
+import { Currency } from '../../models/types';
 import { promises as fs } from 'fs';
 import path from 'path';
 
 describe('BeancountService', () => {
   let service: BeancountService;
-  const testFilePath = path.join(__dirname, 'test.beancount');
+  const testFilePath = path.join(__dirname, '2024/03.bean');
 
   beforeEach(() => {
-    service = new BeancountService(testFilePath);
+    service = new BeancountService(__dirname);
   });
 
   afterEach(async () => {
     try {
       await fs.unlink(testFilePath);
+      await fs.unlink(path.join(__dirname, 'main.bean'));
     } catch (error) {
       // Ignore if file doesn't exist
     }
