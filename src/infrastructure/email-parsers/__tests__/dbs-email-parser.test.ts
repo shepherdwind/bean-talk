@@ -97,9 +97,7 @@ Please do not reply to this email as it is auto generated`;
           currency: Currency.USD
         });
 
-        expect(result.metadata).toEqual({
-          emailId: 'test-id',
-        });
+        expect(result.metadata).toHaveProperty('emailId', 'test-id');
       }
     });
 
@@ -157,9 +155,7 @@ Please do not reply to this email as it is auto generated`;
           currency: Currency.SGD
         });
 
-        expect(result.metadata).toEqual({
-          emailId: 'test-id',
-        });
+        expect(result.metadata).toHaveProperty('emailId', 'test-id');
       }
     });
 
@@ -214,9 +210,7 @@ Please do not reply to this email as it is auto generated`;
           currency: Currency.SGD
         });
 
-        expect(result.metadata).toEqual({
-          emailId: 'test-id',
-        });
+        expect(result.metadata).toHaveProperty('emailId', 'test-id');
       }
     });
 

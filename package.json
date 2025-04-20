@@ -1,6 +1,6 @@
 {
   "name": "bean-talk",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A personal finance accounting system with Telegram bot interface",
   "main": "dist/index.js",
   "scripts": {

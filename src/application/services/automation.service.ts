@@ -4,6 +4,7 @@ import { AccountingService } from "../../domain/services/accounting.service";
 import { ILogger, container, Logger } from "../../infrastructure/utils";
 import { ApplicationEventEmitter } from "../../infrastructure/events/event-emitter";
 import { TelegramAdapter } from "../../infrastructure/telegram/telegram.adapter";
+import { formatDateToUTC8 } from "../../infrastructure/utils/date.utils";
 
 export class AutomationService {
   private gmailAdapter: GmailAdapter;
@@ -74,12 +75,6 @@ export class AutomationService {
     const transaction = await this.billParserService.parseBillText(email);
 
     if (transaction) {
-      // Add metadata about the source
-      transaction.metadata = {
-        ...transaction.metadata,
-        source: "gmail",
-      };
-
       // Save the transaction
       await this.accountingService.addTransaction(transaction);
 
@@ -90,8 +85,8 @@ export class AutomationService {
       const expenseEntry = transaction.entries.find(
         (entry) => entry.amount.value < 0
       );
-      const message = `✅ Bill processed successfully:\nSubject: ${
-        email.subject
+      const message = `✅ Bill processed successfully:\nTime: ${
+        formatDateToUTC8(email.date)
       }\nAmount: ${Math.abs(expenseEntry?.amount.value || 0)} ${
         expenseEntry?.amount.currency
       }\nDescription: ${transaction.description}\nAccount: ${

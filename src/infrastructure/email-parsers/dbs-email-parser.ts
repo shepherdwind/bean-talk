@@ -9,6 +9,7 @@ import { container } from "../utils";
 import { AccountingService } from "../../domain/services/accounting.service";
 import { extractTransactionData, TransactionData } from "./dbs-transaction-extractor";
 import { EventTypes } from '../events/event-types';
+import { formatDateToUTC8 } from "../utils/date.utils";
 
 /**
  * Interface for transaction creation parameters
@@ -154,6 +155,7 @@ export class DBSEmailParser implements EmailParser {
       entries,
       metadata: {
         emailId,
+        date,
       },
     };
   }

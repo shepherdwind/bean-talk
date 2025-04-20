@@ -122,7 +122,8 @@ export async function setupAutomation(): Promise<void> {
   
   // Set up cron job for regular checks
   logger.info('Setting up scheduled Gmail bill check cron job...');
-  cron.schedule('0 * * * *', async () => {
+  const cronSchedule = process.env.CRON_SCHEDULE || '*/30 * * * *';
+  cron.schedule(cronSchedule, async () => {
     logger.info('Running scheduled Gmail bill check...');
     try {
       const automationService = container.getByClass(AutomationService);
