@@ -100,12 +100,12 @@ export class AutomationService {
       // Get the account mention based on the account name
       const accountMention = expenseEntry?.account ? ACCOUNT_TELEGRAM_MAP[expenseEntry.account] : '';
 
-      const message = `✅ Bill processed successfully:\nTime: ${
+      const message = `New transaction:\nTime: <b>${
         formatTimeToUTC8(email.date)
-      }\nAmount: ${Math.abs(expenseEntry?.amount.value || 0)} ${
+      }</b>\nAmount: <b>${Math.abs(expenseEntry?.amount.value || 0)} ${
         expenseEntry?.amount.currency
-      }\nDescription: ${transaction.description}\nAccount: ${
-        expenseEntry?.account
+      }</b>\nTo: ${transaction.description}\n${
+        transaction.entries[1]?.account
       }\n${accountMention}`;
       await this.telegramAdapter.sendNotification(message);
 

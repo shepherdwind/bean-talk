@@ -61,7 +61,7 @@ export class CommandHandlers {
         await this.categorizationHandler.sendNotification(chatId, message, merchantId, categorizationData);
       } else {
         // 普通通知直接发送
-        await this.bot.telegram.sendMessage(chatId, message);
+        await this.bot.telegram.sendMessage(chatId, message, { parse_mode: 'HTML' });
       }
     } catch (error) {
       this.logger.error(`Failed to send notification to chat ${chatId}:`, error);
