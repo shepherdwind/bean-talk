@@ -3,6 +3,7 @@ import { TelegramAdapter } from '../telegram/telegram.adapter';
 import { container } from '../utils';
 import { logger } from '../utils/logger';
 import { AccountingService } from '../../domain/services/accounting.service';
+import { formatDateToUTC8 } from '../utils/date.utils';
 
 interface MerchantCategorySelectedEvent {
   merchantId: string;
@@ -33,17 +34,14 @@ export class EventListenerService {
       try {
         let message = `🔍 New Merchant Needs Categorization\n\n` +
           `🏪 Merchant: ${data.merchant}\n` +
-          `⏰ Time: ${new Date(data.timestamp).toLocaleString()}\n\n`;
+          `💰 Amount: ${data.amount?.value} ${data.amount?.currency}\n` +
+          `⏰ Time: ${formatDateToUTC8(data.email?.date)}\n\n`;
         
         // Add email information if available
         if (data.email) {
           message += `📧 Email Details:\n` +
             `📝 Subject: ${data.email.subject}\n` +
             `📨 From: ${data.email.from}\n`;
-          
-          if (data.email.date) {
-            message += `📅 Date: ${data.email.date}\n`;
-          }
         }
         
         message += `\nPlease update the merchant category mapping in the configuration or use AI assistance.`;

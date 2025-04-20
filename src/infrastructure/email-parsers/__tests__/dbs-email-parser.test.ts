@@ -2,12 +2,20 @@ import { DBSEmailParser } from '../dbs-email-parser';
 import { Email } from '../../gmail/gmail.adapter';
 import { Currency } from '../../../domain/models/types';
 import { AccountName } from '../../../domain/models/account';
+import { AccountingService } from '../../../domain/services/accounting.service';
+import { container } from '../../utils';
+
+jest.mock('../../../domain/services/accounting.service');
 
 describe('DBSEmailParser', () => {
   let parser: DBSEmailParser;
+  let mockAccountingService: jest.Mocked<AccountingService>;
 
   beforeEach(() => {
     parser = new DBSEmailParser();
+    mockAccountingService = new AccountingService() as jest.Mocked<AccountingService>;
+    mockAccountingService.findCategoryForMerchant = jest.fn().mockReturnValue(AccountName.ExpensesShoppingOnline);
+    container.registerClass(AccountingService, mockAccountingService);
   });
 
   describe('canParse', () => {
@@ -59,7 +67,15 @@ Please do not reply to this email as it is auto generated`;
 
       expect(result).not.toBeNull();
       if (result) {
-        expect(result.date).toEqual(new Date(2025, 3, 18, 13, 29)); // April is month 3 (0-based)
+        const expectedDate = new Date();
+        expectedDate.setMonth(3); // April
+        expectedDate.setDate(18);
+        expectedDate.setHours(13);
+        expectedDate.setMinutes(29);
+        expectedDate.setSeconds(0);
+        expectedDate.setMilliseconds(0);
+
+        expect(result.date.getTime()).toBe(expectedDate.getTime());
         expect(result.description).toBe('GAMMA.APP');
         expect(result.entries).toHaveLength(2);
         

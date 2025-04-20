@@ -36,12 +36,12 @@ interface TransactionCreationParams {
  * Adapter for parsing DBS transaction alert emails
  */
 export class DBSEmailParser implements EmailParser {
-  private eventEmitter: ApplicationEventEmitter;
-  private accountingService: AccountingService;
+  private get eventEmitter(): ApplicationEventEmitter {
+    return container.getByClass(ApplicationEventEmitter);
+  }
 
-  constructor() {
-    this.eventEmitter = container.getByClass(ApplicationEventEmitter);
-    this.accountingService = container.getByClass(AccountingService);
+  private get accountingService(): AccountingService {
+    return container.getByClass(AccountingService);
   }
 
   /**
@@ -160,7 +160,11 @@ export class DBSEmailParser implements EmailParser {
       merchant,
       merchantId,
       timestamp,
-      email, 
+      email,
+      amount: {
+        value: this.extractTransactionData(email)?.amount || 0,
+        currency: this.extractTransactionData(email)?.currency || 'SGD'
+      }
     };
 
     // Emit an event for the new merchant that needs categorization

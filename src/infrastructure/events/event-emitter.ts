@@ -9,10 +9,15 @@ export interface MerchantCategorizationEvent {
   merchant: string;
   merchantId: string;
   timestamp: string;
+  amount?: {
+    value: number;
+    currency: string;
+  };
   email?: {
     id: string;
     subject: string;
     from: string;
+    body?: string;
     date?: string;
   };
 }

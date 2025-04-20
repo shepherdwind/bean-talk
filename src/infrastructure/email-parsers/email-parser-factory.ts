@@ -2,7 +2,6 @@ import { Email } from '../gmail/gmail.adapter';
 import { Transaction } from '../../domain/models/transaction';
 import { EmailParser } from './email-parser.interface';
 import { DBSEmailParser } from './dbs-email-parser';
-import { Account } from '../../domain/models/account';
 
 /**
  * Factory for creating and managing email parsers
