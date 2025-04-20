@@ -66,12 +66,36 @@ export class BeancountService {
     const dir = path.dirname(filePath);
     await this.ensureDirectoryExists(dir);
 
+    // Get the relative path for include statement
+    const relativePath = path.relative(this.baseDir, filePath);
+    const includePath = relativePath.replace(/\\/g, '/'); // Convert Windows path to Unix style
+
     // Ensure the file exists
     try {
       await fs.access(filePath);
     } catch (error) {
       // File doesn't exist, create it with an empty content
       await fs.writeFile(filePath, '', 'utf-8');
+
+      // Add include statement to main.bean
+      const mainBeanPath = path.join(this.baseDir, 'main.bean');
+      try {
+        await fs.access(mainBeanPath);
+      } catch (error) {
+        // If main.bean doesn't exist, create it
+        await fs.writeFile(mainBeanPath, '', 'utf-8');
+      }
+
+      // Read the current content of main.bean
+      const mainBeanContent = await fs.readFile(mainBeanPath, 'utf-8');
+      
+      // Check if the include statement already exists
+      const includeStatement = `include "${includePath}"`;
+      if (!mainBeanContent.includes(includeStatement)) {
+        // Add the include statement with a newline
+        const newContent = mainBeanContent.trim() + '\n' + includeStatement + '\n';
+        await fs.writeFile(mainBeanPath, newContent, 'utf-8');
+      }
     }
   }
 
