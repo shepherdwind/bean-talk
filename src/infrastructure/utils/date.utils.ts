@@ -15,3 +15,9 @@ export function formatDateToUTC8(date: string | undefined): string {
   });
   return `${month}/${day} ${time} ${weekday}`;
 } 
+
+export const formatTimeToUTC8 = (date: string | undefined): string => {
+  if (!date) return '';
+  const utcDate = new Date(date);
+  return utcDate.toLocaleTimeString('en-US', { timeZone: 'Asia/Shanghai' });
+}

@@ -4,7 +4,20 @@ import { AccountingService } from "../../domain/services/accounting.service";
 import { ILogger, container, Logger } from "../../infrastructure/utils";
 import { ApplicationEventEmitter } from "../../infrastructure/events/event-emitter";
 import { TelegramAdapter } from "../../infrastructure/telegram/telegram.adapter";
-import { formatDateToUTC8 } from "../../infrastructure/utils/date.utils";
+import { formatTimeToUTC8 } from "../../infrastructure/utils/date.utils";
+import { AccountName } from "../../domain/models/account";
+
+// Account to Telegram username mapping (Assets only)
+const ACCOUNT_TELEGRAM_MAP: Partial<Record<AccountName, string>> = {
+  [AccountName.AssetsDBSSGDWife]: '@LingerZou',
+  [AccountName.AssetsDBSSGDSaving]: '@ewardsong',
+  [AccountName.AssetsICBCSGDSavings]: '',
+  [AccountName.AssetsCMBCRMB]: '',
+  [AccountName.AssetsInvestmentSRS]: '',
+  [AccountName.AssetsSGDBitcoin]: '',
+  [AccountName.AssetsSGDMoomoo]: '',
+  [AccountName.AssetsSGDMoomooWife]: '',
+};
 
 export class AutomationService {
   private gmailAdapter: GmailAdapter;
@@ -82,21 +95,24 @@ export class AutomationService {
       await this.gmailAdapter.markAsRead(email.id);
 
       // Send notification to Telegram
-      const expenseEntry = transaction.entries.find(
-        (entry) => entry.amount.value < 0
-      );
+      const expenseEntry = transaction.entries[0];
+
+      // Get the account mention based on the account name
+      const accountMention = expenseEntry?.account ? ACCOUNT_TELEGRAM_MAP[expenseEntry.account] : '';
+
       const message = `✅ Bill processed successfully:\nTime: ${
-        formatDateToUTC8(email.date)
+        formatTimeToUTC8(email.date)
       }\nAmount: ${Math.abs(expenseEntry?.amount.value || 0)} ${
         expenseEntry?.amount.currency
       }\nDescription: ${transaction.description}\nAccount: ${
         expenseEntry?.account
-      }`;
+      }\n${accountMention}`;
       await this.telegramAdapter.sendNotification(message);
 
       this.logger.info(
         `Successfully processed bill from email: ${email.subject}`
       );
+      this.logger.debug(`Message: ${message}`);
     } else {
       this.logger.warn(
         `Could not extract bill information from email: ${email.subject}`
