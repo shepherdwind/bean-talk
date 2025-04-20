@@ -55,6 +55,17 @@ export class CommandHandlers {
 
   // 发送通知
   async sendNotification(chatId: string, message: string, merchantId?: string, categorizationData?: PendingCategorization): Promise<void> {
-    await this.categorizationHandler.sendNotification(chatId, message, merchantId, categorizationData);
+    try {
+      if (merchantId && categorizationData) {
+        // 如果需要分类，使用 categorizationHandler
+        await this.categorizationHandler.sendNotification(chatId, message, merchantId, categorizationData);
+      } else {
+        // 普通通知直接发送
+        await this.bot.telegram.sendMessage(chatId, message);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send notification to chat ${chatId}:`, error);
+      throw error;
+    }
   }
 } 
