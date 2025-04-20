@@ -134,7 +134,6 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
     }
   }
 
-  // 处理分类商家的回调
   async handleCategorizeMerchantCallback(ctx: Context, truncatedId: string): Promise<void> {
     const fullMerchantId = this.getFullMerchantId(truncatedId);
     if (!fullMerchantId) {
@@ -146,11 +145,16 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
     const pendingCategorization = this.getPendingCategorization(fullMerchantId);
     
     if (!pendingCategorization) {
-      await ctx.reply(MESSAGES.CATEGORIZATION_EXPIRED);
+      await ctx.answerCbQuery(MESSAGES.ERROR_CATEGORIZATION_NOT_FOUND);
       return;
     }
 
     try {
+      // Remove the "Categorize with AI" button immediately after click
+      if (ctx.callbackQuery?.message?.message_id) {
+        await ctx.editMessageReplyMarkup({ inline_keyboard: [] });
+      }
+
       await ctx.answerCbQuery();
       await ctx.reply(MESSAGES.CATEGORIZATION_PROMPT(pendingCategorization.merchant));
 
