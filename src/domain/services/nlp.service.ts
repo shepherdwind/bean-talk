@@ -22,8 +22,7 @@ export class NLPService {
   async categorizeMerchant(merchant: string, additionalInfo: string): Promise<CategoryOptions> {
     try {
       // Get all expense accounts using AccountingService
-      const expenseAccounts = this.accountingService.getAccountsByType(AccountType.Expense);
-      const expenseCategories = expenseAccounts.map(account => account.name);
+      const expenseAccounts = this.accountingService.getAllAccountNames();
 
       const prompt = `Please help categorize this merchant based on the following information:
 
@@ -31,7 +30,7 @@ Merchant Name: ${merchant}
 Additional Information: ${additionalInfo}
 
 Available categories are:
-${expenseCategories.join('\n')}
+${expenseAccounts.join('\n')}
 
 Please provide three category options in the following format:
 1. Primary Category: (choose the most appropriate category from the list above)

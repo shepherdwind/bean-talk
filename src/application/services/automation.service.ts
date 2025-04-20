@@ -48,6 +48,7 @@ export class AutomationService {
           this.logger.info(
             `Starting to process email: ${email.subject} (${email.id})`
           );
+          this.logger.debug(`Email body: ${email.body}`);
           await this.processBillEmail(email);
           this.logger.info(`Finished processing email: ${email.subject}`);
           processedCount++;
