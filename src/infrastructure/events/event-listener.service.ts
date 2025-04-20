@@ -81,19 +81,12 @@ export class EventListenerService {
       async (data: MerchantCategorizationEvent) => {
         try {
           let message =
-            `🔍 New Merchant Needs Categorization\n\n` +
-            `🏪 Merchant: ${data.merchant}\n` +
-            `💰 Amount: ${data.amount?.value} ${data.amount?.currency}\n` +
-            `⏰ Time: ${formatDateToUTC8(data.email?.date)}\n\n`;
+            `New Merchant Needs Categorization\n\n` +
+            `Merchant: <b>${data.merchant}</b>\n` +
+            `Amount: <b>${data.amount?.value} ${data.amount?.currency}</b>\n` +
+            `Time: <b>${formatDateToUTC8(data.email?.date)}</b>\n\n`;
 
-          if (data.email) {
-            message +=
-              `📧 Email Details:\n` +
-              `📝 Subject: ${data.email.subject}\n` +
-              `📨 From: ${data.email.from}\n`;
-          }
-
-          message += `\nPlease update the merchant category mapping in the configuration or use AI assistance.`;
+          message += `\nPlease update the merchant category use AI assistance.`;
 
           await this.telegramAdapter.sendNotification(
             message,

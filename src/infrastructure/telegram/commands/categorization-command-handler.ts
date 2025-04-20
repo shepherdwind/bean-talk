@@ -121,7 +121,7 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
         ]);
       }
 
-      await this.bot.telegram.sendMessage(chatId, message, keyboard);
+      await this.bot.telegram.sendMessage(chatId, message, { parse_mode: 'HTML', ...keyboard });
       
       if (merchantId && categorizationData) {
         this.pendingCategorizations.set(merchantId, categorizationData);
@@ -156,7 +156,7 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
       }
 
       await ctx.answerCbQuery();
-      await ctx.reply(MESSAGES.CATEGORIZATION_PROMPT(pendingCategorization.merchant));
+      await ctx.reply(MESSAGES.CATEGORIZATION_PROMPT(pendingCategorization.merchant), { parse_mode: 'HTML' });
 
       if (ctx.chat?.id) {
         const chatId = ctx.chat.id.toString();

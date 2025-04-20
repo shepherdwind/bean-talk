@@ -12,13 +12,8 @@ export const MESSAGES = {
   WELCOME: 'Welcome to BeanTalk! Your personal finance assistant.',
   CATEGORIZATION_EXPIRED: '❌ Sorry, this categorization request has expired or is invalid.',
   CATEGORIZATION_PROMPT: (merchant: string) => 
-    `🤖 I'll help you categorize "${merchant}".\n\n` +
-    `Please provide any additional information about this merchant that might help with categorization.\n` +
-    `For example:\n` +
-    `- What type of business is it?\n` +
-    `- What did you purchase?\n` +
-    `- Any specific details about the transaction?\n\n` +
-    `Just type your response and I'll analyze it.`,
+    `🤖 I'll help you categorize <b>${merchant}</b>.\n` +
+    `Please provide any additional information that might help with categorization.`,
   ANALYZING: '🤖 Analyzing the information...',
   CATEGORIZATION_ERROR: '❌ Sorry, there was an error processing the categorization.',
   CATEGORIZATION_REQUEST_ERROR: '❌ Sorry, there was an error processing your request.',
