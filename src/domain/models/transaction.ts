@@ -1,4 +1,5 @@
-import { Account, AccountName } from './account';
+import { AccountName } from './account';
+import { Account } from '../services/accounting.service';
 import { Amount } from './types';
 
 /**
@@ -44,4 +45,4 @@ export interface Transaction {
    * Additional metadata for this transaction
    */
   metadata?: Record<string, unknown>;
-} 
+}

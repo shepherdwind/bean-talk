@@ -133,4 +133,4 @@ export async function setupAutomation(): Promise<void> {
   });
   
   logger.info('Automation tasks setup completed');
-} 
+}

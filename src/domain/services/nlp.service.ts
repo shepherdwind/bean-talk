@@ -1,7 +1,7 @@
-import { getAccountsByType } from '../models/account';
 import { OpenAIAdapter } from '../../infrastructure/openai/openai.adapter';
 import { logger, container } from '../../infrastructure/utils';
 import { AccountType } from '../models/types';
+import { AccountingService } from './accounting.service';
 
 export interface CategoryOptions {
   primaryCategory: string;
@@ -11,16 +11,18 @@ export interface CategoryOptions {
 
 export class NLPService {
   private openaiAdapter: OpenAIAdapter;
+  private accountingService: AccountingService;
 
-  constructor(openaiAdapter?: OpenAIAdapter) {
+  constructor(openaiAdapter?: OpenAIAdapter, accountingService?: AccountingService) {
     // 如果提供了直接依赖，使用它；否则从容器通过类名获取
     this.openaiAdapter = openaiAdapter || container.getByClass(OpenAIAdapter);
+    this.accountingService = accountingService || container.getByClass(AccountingService);
   }
 
   async categorizeMerchant(merchant: string, additionalInfo: string): Promise<CategoryOptions> {
     try {
-      // Get all expense accounts
-      const expenseAccounts = getAccountsByType(AccountType.Expense);
+      // Get all expense accounts using AccountingService
+      const expenseAccounts = this.accountingService.getAccountsByType(AccountType.Expense);
       const expenseCategories = expenseAccounts.map(account => account.name);
 
       const prompt = `Please help categorize this merchant based on the following information:

@@ -4,22 +4,44 @@ import { AccountName } from "../../domain/models/account";
 import { Amount, Currency } from "../../domain/models/types";
 import { EmailParser } from "./email-parser.interface";
 import { logger } from "../utils/logger";
-import {
-  findCategoryForMerchant,
-  updateMerchantCategoryMappingsIfNeeded,
-  addMerchantToMapping,
-} from "../config/merchant-category-mapping";
 import { ApplicationEventEmitter, MerchantCategorizationEvent } from "../events/event-emitter";
 import { container } from "../utils";
+import { AccountingService } from "../../domain/services/accounting.service";
+
+/**
+ * Interface for transaction data extracted from email
+ */
+interface TransactionData {
+  amount: number;
+  date: Date;
+  merchant: string;
+  cardInfo: string;
+  currency: Currency;
+}
+
+/**
+ * Interface for transaction creation parameters
+ */
+interface TransactionCreationParams {
+  date: Date;
+  merchant: string;
+  amount: number;
+  currency: Currency;
+  cardInfo: string;
+  category: AccountName;
+  emailId: string;
+}
 
 /**
  * Adapter for parsing DBS transaction alert emails
  */
 export class DBSEmailParser implements EmailParser {
   private eventEmitter: ApplicationEventEmitter;
+  private accountingService: AccountingService;
 
   constructor() {
     this.eventEmitter = container.getByClass(ApplicationEventEmitter);
+    this.accountingService = container.getByClass(AccountingService);
   }
 
   /**
@@ -41,89 +63,148 @@ export class DBSEmailParser implements EmailParser {
     }
 
     try {
-      const amountMatch = email.body.match(/Amount: (SGD|USD)(\d+(\.\d{1,2})?)/i);
-      if (!amountMatch) {
-        logger.warn("Failed to extract amount from DBS transaction email");
+      const transactionData = this.extractTransactionData(email);
+      if (!transactionData) {
         return null;
       }
 
-      const currency = amountMatch[1].toUpperCase() as Currency;
-      const amountStr = amountMatch[2];
-      const dateStr = this.extractValue(
-        email.body,
-        /Date & Time: (\d{2} [A-Za-z]{3} \d{2}:\d{2}) \(SGT\)/i
-      );
-      const merchant = this.extractValue(email.body, /To: ([^\n]+)/i);
-      const cardInfo = this.extractValue(email.body, /From: ([^\n]+)/i);
-
-      if (!dateStr || !merchant) {
-        logger.warn("Failed to extract required DBS transaction information");
-        return null;
-      }
-
-      // Parse date
-      const date = this.parseDate(dateStr);
-
-      // Parse amount
-      const amount = this.parseAmount(amountStr, currency);
+      const { amount, date, merchant, cardInfo, currency } = transactionData;
 
       // Get merchant category from mapping
-      updateMerchantCategoryMappingsIfNeeded();
-      const category = findCategoryForMerchant(merchant);
-
+      const category = this.getMerchantCategory(merchant, email);
       if (!category) {
-        // If merchant not found in mapping, add it to the config file and emit event
-        addMerchantToMapping(merchant);
-        logger.info(
-          `Merchant "${merchant}" not found in category mapping. Added to config for manual categorization.`
-        );
-        
-        const timestamp = new Date().toISOString();
-        const merchantId = `${merchant.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}`;
-        
-        const event: MerchantCategorizationEvent = {
-          merchant,
-          merchantId,
-          timestamp,
-          email, 
-        };
-
-        // Emit an event for the new merchant that needs categorization
-        this.eventEmitter.emit('merchantNeedsCategorization', event);
         return null;
       }
 
       // Create transaction entries
-      const entries: Entry[] = [
-        {
-          account: AccountName.AssetsDBSSGDSaving,
-          amount: amount,
-          metadata: {
-            merchant,
-            cardInfo,
-          },
-        },
-        {
-          account: category as AccountName,
-          amount: {
-            ...amount,
-            value: -amount.value, // Negative for expense
-          },
-        },
-      ];
-
-      return {
-        date,
-        description: `${merchant}`,
-        entries,
-        metadata: {
-          emailId: email.id,
-        },
-      };
+      return this.createTransaction({ date, merchant, amount, currency, cardInfo, category, emailId: email.id });
     } catch (error) {
       logger.error("Error parsing DBS email:", error);
       return null;
     }
+  }
+
+  /**
+   * Extracts transaction data from email body
+   */
+  private extractTransactionData(email: Email): { 
+    amount: number; 
+    date: Date; 
+    merchant: string; 
+    cardInfo: string; 
+    currency: Currency 
+  } | null {
+    const amountMatch = email.body.match(/Amount: (SGD|USD)(\d+(\.\d{1,2})?)/i);
+    if (!amountMatch) {
+      logger.warn("Failed to extract amount from DBS transaction email");
+      return null;
+    }
+
+    const currency = amountMatch[1].toUpperCase() as Currency;
+    const amountStr = amountMatch[2];
+    const dateStr = this.extractValue(
+      email.body,
+      /Date & Time: (\d{2} [A-Za-z]{3} \d{2}:\d{2}) \(SGT\)/i
+    );
+    const merchant = this.extractValue(email.body, /To: ([^\n]+)/i);
+    const cardInfo = this.extractValue(email.body, /From: ([^\n]+)/i);
+
+    if (!dateStr || !merchant) {
+      logger.warn("Failed to extract required DBS transaction information");
+      return null;
+    }
+
+    // Parse date
+    const date = this.parseDate(dateStr);
+
+    // Parse amount
+    const amount = parseFloat(amountStr);
+
+    return {
+      amount,
+      date,
+      merchant,
+      cardInfo: cardInfo || '',
+      currency
+    };
+  }
+
+  /**
+   * Gets category for merchant or handles new merchant categorization
+   */
+  private getMerchantCategory(merchant: string, email: Email): AccountName | null {
+    const category = this.accountingService.findCategoryForMerchant(merchant);
+
+    if (!category) {
+      // If merchant not found in mapping, add it to the config file and emit event
+      this.accountingService.addMerchantToCategory(merchant);
+      logger.info(
+        `Merchant "${merchant}" not found in category mapping. Added to config for manual categorization.`
+      );
+      
+      this.emitMerchantCategorizationEvent(merchant, email);
+      return null;
+    }
+
+    return category as AccountName;
+  }
+
+  /**
+   * Emits an event for merchant categorization
+   */
+  private emitMerchantCategorizationEvent(merchant: string, email: Email): void {
+    const timestamp = new Date().toISOString();
+    const merchantId = `${merchant.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}`;
+    
+    const event: MerchantCategorizationEvent = {
+      merchant,
+      merchantId,
+      timestamp,
+      email, 
+    };
+
+    // Emit an event for the new merchant that needs categorization
+    this.eventEmitter.emit('merchantNeedsCategorization', event);
+  }
+
+  /**
+   * Creates a transaction object from parsed data
+   */
+  private createTransaction(params: TransactionCreationParams): Transaction {
+    const { date, merchant, amount, currency, cardInfo, category, emailId } = params;
+    
+    const amountObj: Amount = {
+      value: amount,
+      currency,
+    };
+
+    // Create transaction entries
+    const entries: Entry[] = [
+      {
+        account: AccountName.AssetsDBSSGDSaving,
+        amount: amountObj,
+        metadata: {
+          merchant,
+          cardInfo,
+        },
+      },
+      {
+        account: category,
+        amount: {
+          ...amountObj,
+          value: -amount, // Negative for expense
+        },
+      },
+    ];
+
+    return {
+      date,
+      description: `${merchant}`,
+      entries,
+      metadata: {
+        emailId,
+      },
+    };
   }
 
   private extractValue(text: string, pattern: RegExp): string | null {

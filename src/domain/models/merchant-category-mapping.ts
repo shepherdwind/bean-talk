@@ -1,7 +1,7 @@
-import { AccountName } from '../../domain/models/account';
 import * as fs from 'fs';
 import * as path from 'path';
-import { logger } from '../utils/logger';
+import { AccountName } from './account';
+import { logger } from '../../infrastructure/utils/logger';
 
 // Get configuration file path from environment variable or use default
 const configPath = process.env.MERCHANT_CATEGORY_CONFIG_PATH || 
@@ -11,16 +11,16 @@ const configPath = process.env.MERCHANT_CATEGORY_CONFIG_PATH ||
 let lastModifiedTime = 0;
 
 // Define the type for the merchant category mapping
-type MerchantCategoryMap = Record<string, string>;
+export type MerchantCategoryMap = Record<string, string>;
 
 // Function to load configuration from file
 function loadConfigFromFile(): MerchantCategoryMap {
   try {
-    console.log(`Loading merchant category mapping from: ${configPath}`);
+    logger.info(`Loading merchant category mapping from: ${configPath}`);
     const configFile = fs.readFileSync(configPath, 'utf8');
     return JSON.parse(configFile) as MerchantCategoryMap;
   } catch (error) {
-    console.error(`Error loading merchant category mapping from ${configPath}:`, error);
+    logger.error(`Error loading merchant category mapping from ${configPath}:`, error);
     return {};
   }
 }
@@ -38,7 +38,7 @@ function isConfigUpdated(): boolean {
     
     return false;
   } catch (error) {
-    console.error(`Error checking config file modification time for ${configPath}:`, error);
+    logger.error(`Error checking config file modification time for ${configPath}:`, error);
     return false;
   }
 }
@@ -47,7 +47,7 @@ function isConfigUpdated(): boolean {
 export function updateMerchantCategoryMappingsIfNeeded(): void {
   if (isConfigUpdated()) {
     merchantCategoryMappings = loadConfigFromFile();
-    console.log('Merchant category mappings updated from file');
+    logger.info('Merchant category mappings updated from file');
   }
 }
 
@@ -59,7 +59,7 @@ try {
   const stats = fs.statSync(configPath);
   lastModifiedTime = stats.mtimeMs;
 } catch (error) {
-  console.error(`Error getting initial file modification time for ${configPath}:`, error);
+  logger.error(`Error getting initial file modification time for ${configPath}:`, error);
 }
 
 /**
@@ -76,7 +76,7 @@ export function findCategoryForMerchant(merchant: string): string | undefined {
   
   // Then try partial match
   for (const [key, value] of Object.entries(merchantCategoryMappings)) {
-    if (merchant.includes(key) || key.includes(merchant)) {
+    if (merchant.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(merchant.toLowerCase())) {
       return value;
     }
   }
@@ -107,4 +107,4 @@ export function addMerchantToMapping(merchant: string, category?: string): void 
   } catch (error: unknown) {
     logger.error(`Error adding merchant to category mapping: ${error instanceof Error ? error.message : String(error)}`);
   }
-} 
+}

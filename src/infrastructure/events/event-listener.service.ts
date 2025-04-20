@@ -2,7 +2,7 @@ import { ApplicationEventEmitter, MerchantCategorizationEvent } from './event-em
 import { TelegramAdapter } from '../telegram/telegram.adapter';
 import { container } from '../utils';
 import { logger } from '../utils/logger';
-import { addMerchantToMapping } from '../config/merchant-category-mapping';
+import { AccountingService } from '../../domain/services/accounting.service';
 
 interface MerchantCategorySelectedEvent {
   merchantId: string;
@@ -22,6 +22,10 @@ export class EventListenerService {
 
   private get telegramAdapter(): TelegramAdapter {
     return container.getByClass(TelegramAdapter);
+  }
+  
+  private get accountingService(): AccountingService {
+    return container.getByClass(AccountingService);
   }
 
   private setupEventListeners(): void {
@@ -53,8 +57,8 @@ export class EventListenerService {
 
     this.eventEmitter.on('merchantCategorySelected', async (data: MerchantCategorySelectedEvent) => {
       try {
-        // Save the selected category to the merchant-category-mapping.json file
-        addMerchantToMapping(data.merchant, data.selectedCategory);
+        // Save the selected category using AccountingService
+        this.accountingService.addMerchantToCategory(data.merchant, data.selectedCategory);
         
         logger.info(`Saved category for merchant: ${data.merchant}`, {
           merchantId: data.merchantId,
@@ -66,4 +70,4 @@ export class EventListenerService {
       }
     });
   }
-} 
+}
