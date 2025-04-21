@@ -122,7 +122,7 @@ Please extract the following information:
 3. Description (string)
 4. Category (string, must be one of: ${Object.values(AccountName).filter(acc => acc.startsWith('Expenses:')).join(', ')})
 
-Please respond in JSON format:
+Please respond with ONLY a clean JSON object in this exact format, without any markdown formatting or additional text:
 {
   "amount": number,
   "currency": "string",
