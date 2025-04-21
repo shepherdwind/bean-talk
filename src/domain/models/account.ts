@@ -8,6 +8,8 @@ export enum AccountName {
   AssetsICBCSGDSavings = 'Assets:ICBC:SGD:Savings',
   AssetsDBSSGDWife = 'Assets:DBS:SGD:Wife',
   AssetsCMBCRMB = 'Assets:CMBC:RMB',
+  AssetsCash = 'Assets:Cash',
+  AssetsCashWife = 'Assets:Cash:Wife',
   AssetsDBSSGDSaving = 'Assets:DBS:SGD:Saving',
   AssetsInvestmentSRS = 'Assets:Investment:SRS',
   AssetsSGDBitcoin = 'Assets:SGD:Bitcoin',
@@ -15,10 +17,10 @@ export enum AccountName {
   AssetsSGDMoomooWife = 'Assets:SGD:Moomoo:Wife',
 
   // Expenses
-  ExpensesCash = 'Expenses:Cash',
   ExpensesEducationKindergarten = 'Expenses:Education:Kindergarten',
   ExpensesEducationKids = 'Expenses:Education:Kids',
-  ExpensesFeesWires = 'Expenses:Fees:Wires',
+  ExpensesEducation = 'Expenses:Education',
+  // ExpensesFeesWires = 'Expenses:Fees:Wires',
   ExpensesFood = 'Expenses:Food',
   ExpensesFoodOnline = 'Expenses:Food:Online',
   ExpensesFoodDining = 'Expenses:Food:Dining',

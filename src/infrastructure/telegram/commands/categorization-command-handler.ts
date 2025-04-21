@@ -1,4 +1,5 @@
 import { Context, Markup } from 'telegraf';
+import { CallbackQuery } from 'telegraf/typings/core/types/typegram';
 import { BaseCommandHandler } from './base-command-handler';
 import { NLPService } from '../../../domain/services/nlp.service';
 import { PendingCategorization } from '../types';
@@ -23,57 +24,69 @@ import {
   CategorySelectionEventData 
 } from './categorization-types';
 import { EventTypes } from '../../events/event-types';
+import { CommandHandlers, UserState } from '../command-handlers';
 
 export class CategorizationCommandHandler extends BaseCommandHandler {
   private nlpService: NLPService;
   private pendingCategorizations: Map<string, PendingCategorization>;
   private bot: Telegraf;
-  private activeCategorizations: Set<string>;
   private eventEmitter: ApplicationEventEmitter;
   private categorizationMap: CategorizationMap;
   private truncatedIdMap: Map<string, string> = new Map(); // Map truncated IDs to full merchant IDs
   protected logger: ILogger;
+  private commandHandlers: CommandHandlers;
 
   constructor(
     bot: Telegraf,
+    commandHandlers: CommandHandlers
   ) {
     super();
     this.nlpService = container.getByClass(NLPService);
     this.pendingCategorizations = new Map<string, PendingCategorization>();
     this.bot = bot;
-    this.activeCategorizations = new Set<string>();
+    this.commandHandlers = commandHandlers;
     this.eventEmitter = container.getByClass(ApplicationEventEmitter);
     this.categorizationMap = new Map<string, CategorizationData>();
     this.logger = container.getByClass(Logger);
     
-    // 设置 action handlers
-    this.setupActionHandlers();
+    // Set up callback query handler
+    this.bot.on('callback_query', async (ctx, next) => {
+      const handled = await this.handleCallbackQuery(ctx);
+      if (!handled) {
+        return next();
+      }
+    });
   }
 
-  // 设置 action handlers
-  private setupActionHandlers(): void {
-    this.logger.debug('Setting up action handlers in CategorizationCommandHandler');
-    
-    // 处理分类商家的回调
-    this.bot.action(new RegExp(`${CALLBACK_PREFIXES.CATEGORIZE_MERCHANT}(.+)`), async (ctx) => {
-      const truncatedId = ctx.match[1];
-      await this.handleCategorizeMerchantCallback(ctx, truncatedId);
-    });
-    
-    // 处理分类选择
-    this.bot.action(/^sc:(.+):(.+)$/, async (ctx) => {
-      const shortId = ctx.match[1];
-      const categoryType = ctx.match[2];
-      await this.handleCategorySelection(ctx, shortId, categoryType);
-    });
+  // Handle callback query
+  async handleCallbackQuery(ctx: Context): Promise<boolean> {
+    const callbackQuery = ctx.callbackQuery as CallbackQuery.DataQuery;
+    if (!callbackQuery?.data) return false;
 
-    // 处理分类取消
-    this.bot.action(/^cc:(.+)$/, async (ctx) => {
-      const shortId = ctx.match[1];
-      await this.handleCategoryCancel(ctx, shortId);
-    });
-    
-    this.logger.debug('Action handlers setup complete in CategorizationCommandHandler');
+    // Only handle callbacks that start with our prefixes
+    if (!callbackQuery.data.startsWith('sc:') && 
+        !callbackQuery.data.startsWith('cc:') && 
+        !callbackQuery.data.startsWith(CALLBACK_PREFIXES.CATEGORIZE_MERCHANT)) {
+      return false;
+    }
+
+    try {
+      if (callbackQuery.data.startsWith(CALLBACK_PREFIXES.CATEGORIZE_MERCHANT)) {
+        const truncatedId = callbackQuery.data.slice(CALLBACK_PREFIXES.CATEGORIZE_MERCHANT.length);
+        await this.handleCategorizeMerchantCallback(ctx, truncatedId);
+      } else if (callbackQuery.data.startsWith('sc:')) {
+        const [, shortId, categoryType] = callbackQuery.data.split(':');
+        await this.handleCategorySelection(ctx, shortId, categoryType);
+      } else if (callbackQuery.data.startsWith('cc:')) {
+        const shortId = callbackQuery.data.slice(3);
+        await this.handleCategoryCancel(ctx, shortId);
+      }
+      return true;
+    } catch (error) {
+      this.logger.error('Error handling callback query:', error);
+      await ctx.answerCbQuery('Sorry, I encountered an error while processing your request.');
+      return true;
+    }
   }
 
   // 实现抽象方法
@@ -97,9 +110,9 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
     this.truncatedIdMap.set(shortId, merchantId);
   }
 
-  // 获取完整商户ID
-  getFullMerchantId(shortId: string): string | undefined {
-    return this.truncatedIdMap.get(shortId);
+  // 获取完整的商家ID
+  getFullMerchantId(truncatedId: string): string | undefined {
+    return this.truncatedIdMap.get(truncatedId);
   }
 
   // 发送通知
@@ -160,7 +173,8 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
 
       if (ctx.chat?.id) {
         const chatId = ctx.chat.id.toString();
-        this.activeCategorizations.add(chatId);
+        // 设置用户状态为分类中
+        this.commandHandlers.setUserState(chatId, UserState.CATEGORIZING);
         pendingCategorization.chatId = chatId;
         this.pendingCategorizations.set(fullMerchantId, pendingCategorization);
       }
@@ -172,14 +186,17 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
 
   async handleMessage(ctx: Context): Promise<void> {
     const chatId = ctx.chat?.id.toString();
-    this.logger.debug(`Message received from chat ID: ${chatId}`);
+    const username = ctx.from?.username || 'unknown';
+    this.logger.debug(`Message received from chat ID: ${chatId}, username: ${username}`);
     
     if (!chatId || !ctx.message || !('text' in ctx.message)) {
       this.logger.debug(`Skipping message: Invalid message format or missing chat ID`);
       return;
     }
 
-    if (this.activeCategorizations.has(chatId)) {
+    // 检查用户是否处于分类状态
+    const userState = this.commandHandlers.getUserState(chatId);
+    if (userState === UserState.CATEGORIZING) {
       const pendingCategorization = findPendingCategorization(this.pendingCategorizations, chatId);
       
       if (pendingCategorization) {
@@ -265,7 +282,8 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
     );
 
     this.removePendingCategorization(merchantId);
-    this.activeCategorizations.delete(chatId);
+    // 重置用户状态为空闲
+    this.commandHandlers.resetUserState(chatId);
     this.categorizationMap.delete(shortId);
   }
 
@@ -300,7 +318,8 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
     });
 
     this.removePendingCategorization(merchantId);
-    this.activeCategorizations.delete(chatId);
+    // 重置用户状态为空闲
+    this.commandHandlers.resetUserState(chatId);
     this.categorizationMap.delete(shortId);
   }
 } 
