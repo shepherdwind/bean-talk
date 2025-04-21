@@ -4,12 +4,14 @@ import { PendingCategorization } from './types';
 import { Telegraf } from 'telegraf';
 import { CategorizationCommandHandler } from './commands/categorization-command-handler';
 import { QueryCommandHandler } from './commands/query-command-handler';
+import { AddCommandHandler } from './commands/add-command-handler';
 
 export class CommandHandlers {
   private logger: ILogger;
   private bot: Telegraf;
   private categorizationHandler: CategorizationCommandHandler;
   private queryHandler: QueryCommandHandler;
+  private addHandler: AddCommandHandler;
 
   constructor(bot: Telegraf) {
     this.logger = container.getByClass(Logger);
@@ -20,37 +22,56 @@ export class CommandHandlers {
     );
     
     this.queryHandler = new QueryCommandHandler();
-    
-    this.logger.debug('Initializing CommandHandlers');
-    this.logger.debug(`Bot instance: ${this.bot ? 'Valid' : 'Invalid'}`);
+    this.addHandler = new AddCommandHandler();
     
     this.setupMessageHandler();
     this.setupCommandHandlers();
-    
-    this.logger.debug('CommandHandlers initialization complete');
   }
 
   private setupMessageHandler(): void {
-    this.logger.debug('Setting up message handler in CommandHandlers');
-    
-    this.bot.on('message', async (ctx) => {
-      await this.categorizationHandler.handleMessage(ctx);
+    // 只处理非命令消息
+    this.bot.on('message', async (ctx, next) => {
+      if (ctx.message && 'text' in ctx.message && !ctx.message.text.startsWith('/')) {
+        await this.handleMessage(ctx);
+      } else {
+        next();
+      }
     });
-    
-    this.logger.debug('Message handler setup complete in CommandHandlers');
   }
 
   private setupCommandHandlers(): void {
-    this.logger.debug('Setting up command handlers in CommandHandlers');
-    
     // Set up start command
-    this.bot.command('start', (ctx) => this.handleStart(ctx));
+    this.bot.command('start', async (ctx) => {
+      try {
+        await this.handleStart(ctx);
+      } catch (error) {
+        this.logger.error('Error handling start command:', error);
+        await ctx.reply('Sorry, I encountered an error while processing your command.');
+      }
+    });
     
-    this.logger.debug('Command handlers setup complete in CommandHandlers');
+    // Set up add command
+    this.bot.command('add', async (ctx) => {
+      try {
+        await this.addHandler.handle(ctx);
+      } catch (error) {
+        this.logger.error('Error handling add command:', error);
+        await ctx.reply('Sorry, I encountered an error while processing your command.');
+      }
+    });
   }
 
   async handleStart(ctx: Context): Promise<void> {
-    await ctx.reply('👋 Welcome to Bean Talk! I\'m here to help you manage your finances.\n\nI can help you:\n- Categorize merchants\n- Query your transactions\n- And more coming soon!');
+    await ctx.reply('👋 Welcome to Bean Talk! I\'m here to help you manage your finances.\n\nI can help you:\n- Categorize merchants\n- Query your transactions\n- Add new bills\n- And more coming soon!');
+  }
+
+  async handleMessage(ctx: Context): Promise<void> {
+    try {
+      await this.categorizationHandler.handleMessage(ctx);
+    } catch (error) {
+      this.logger.error('Error handling message:', error);
+      await ctx.reply('Sorry, I encountered an error while processing your message.');
+    }
   }
 
   // 发送通知

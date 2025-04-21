@@ -12,51 +12,70 @@ export class TelegramAdapter {
 
   constructor() {
     this.logger = container.getByClass(Logger);
-    this.logger.debug('Initializing TelegramAdapter...');
     
     const token = process.env.TELEGRAM_BOT_TOKEN;
-    this.logger.debug(`TELEGRAM_BOT_TOKEN available: ${!!token}`);
-    
     if (!token) {
       this.logger.error('TELEGRAM_BOT_TOKEN is required in environment variables');
       throw new Error('TELEGRAM_BOT_TOKEN is required in environment variables');
     }
     
-    this.bot = new Telegraf(token);
-    this.logger.debug('Telegraf bot instance created');
+    try {
+      this.bot = new Telegraf(token);
+    } catch (error) {
+      this.logger.error('Failed to create Telegraf instance:', error);
+      throw error;
+    }
     
-    this.commandHandlers = new CommandHandlers(this.bot);
-    this.logger.debug('CommandHandlers initialized');
+    try {
+      this.commandHandlers = new CommandHandlers(this.bot);
+    } catch (error) {
+      this.logger.error('Failed to initialize CommandHandlers:', error);
+      throw error;
+    }
     
     const chatId = process.env.TELEGRAM_CHAT_ID;
-    this.logger.debug(`TELEGRAM_CHAT_ID available: ${!!chatId}`);
-    
     if (!chatId) {
       this.logger.warn('TELEGRAM_CHAT_ID not found in environment variables');
     }
     this.chatId = chatId || '';
+  }
 
-    this.logger.debug('TelegramAdapter initialization complete');
+  private async setupCommands(): Promise<void> {
+    try {
+      await this.bot.telegram.setMyCommands([
+        { command: 'start', description: 'Start the bot and see welcome message' },
+        { command: 'add', description: 'Add a new bill' }
+      ]);
+    } catch (error) {
+      this.logger.error('Failed to set up bot commands:', error);
+    }
   }
 
   async init(): Promise<void> {
     try {
-      this.logger.debug('Starting Telegram bot initialization...');
-      this.logger.debug(`Bot token available: ${!!process.env.TELEGRAM_BOT_TOKEN}`);
-      this.logger.debug(`Chat ID: ${this.chatId || 'Not set'}`);
-      
-      this.logger.info('Initializing Telegram bot...');
+      // Add error handler for the bot
+      this.bot.catch((err: any) => {
+        this.logger.error('Bot error occurred:', err);
+      });
+
+      // Try to get bot info before launch
+      try {
+        await this.bot.telegram.getMe();
+      } catch (error) {
+        this.logger.error('Failed to get bot info:', error);
+      }
+
+      // Set up bot commands
+      await this.setupCommands();
+
+      // Launch the bot
       await this.bot.launch();
-      this.logger.info('Telegram bot initialized successfully');
 
       // Enable graceful stop
-      process.once('SIGINT', () => this.bot.stop('SIGINT'));
-      process.once('SIGTERM', () => this.bot.stop('SIGTERM'));
-      
-      this.logger.debug('Telegram bot initialization complete');
+      process.once('SIGINT', () => this.bot.stop());
+      process.once('SIGTERM', () => this.bot.stop());
     } catch (error) {
       this.logger.error('Failed to initialize Telegram bot:', error);
-      this.logger.debug('Error details:', error);
       throw error;
     }
   }
@@ -68,7 +87,6 @@ export class TelegramAdapter {
     }
 
     try {
-      // 使用 CommandHandlers 的 sendNotification 方法
       await this.commandHandlers.sendNotification(
         this.chatId,
         message,
