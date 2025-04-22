@@ -5,26 +5,13 @@ import { ILogger, container, Logger } from "../../infrastructure/utils";
 import { ApplicationEventEmitter } from "../../infrastructure/events/event-emitter";
 import { TelegramAdapter } from "../../infrastructure/telegram/telegram.adapter";
 import { formatTimeToUTC8 } from "../../infrastructure/utils/date.utils";
-import { AccountName } from "../../domain/models/account";
-
-// Account to Telegram username mapping (Assets only)
-const ACCOUNT_TELEGRAM_MAP: Partial<Record<AccountName, string>> = {
-  [AccountName.AssetsDBSSGDWife]: '@LingerZou',
-  [AccountName.AssetsDBSSGDSaving]: '@ewardsong',
-  [AccountName.AssetsICBCSGDSavings]: '',
-  [AccountName.AssetsCMBCRMB]: '',
-  [AccountName.AssetsInvestmentSRS]: '',
-  [AccountName.AssetsSGDBitcoin]: '',
-  [AccountName.AssetsSGDMoomoo]: '',
-  [AccountName.AssetsSGDMoomooWife]: '',
-};
+import { ACCOUNT_TELEGRAM_MAP } from "../../infrastructure/utils/telegram";
 
 export class AutomationService {
   private gmailAdapter: GmailAdapter;
   private billParserService: BillParserService;
   private accountingService: AccountingService;
   private logger: ILogger;
-  private eventEmitter: ApplicationEventEmitter;
   private telegramAdapter: TelegramAdapter;
 
   constructor() {
@@ -33,7 +20,6 @@ export class AutomationService {
     this.billParserService = container.getByClass(BillParserService);
     this.accountingService = container.getByClass(AccountingService);
     this.logger = container.getByClass(Logger);
-    this.eventEmitter = container.getByClass(ApplicationEventEmitter);
     this.telegramAdapter = container.getByClass(TelegramAdapter);
   }
 
@@ -106,7 +92,7 @@ export class AutomationService {
         expenseEntry?.amount.currency
       }</b>\nTo: ${transaction.description}\n${
         transaction.entries[1]?.account
-      }\n${accountMention}`;
+      }\n@${accountMention}`;
       await this.telegramAdapter.sendNotification(message);
 
       this.logger.info(

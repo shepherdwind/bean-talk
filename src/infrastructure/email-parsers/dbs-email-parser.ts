@@ -72,7 +72,7 @@ export class DBSEmailParser implements EmailParser {
       // Create transaction entries
       return this.createTransaction({
         date, merchant, amount, currency, cardInfo, category, emailId: email.id,
-        account: this.getAccountForMerchant(email.body)
+        account: this.getAccountForMerchant(email)
       });
     } catch (error) {
       logger.error("Error parsing DBS email:", error);
@@ -80,8 +80,10 @@ export class DBSEmailParser implements EmailParser {
     }
   }
   
-  private getAccountForMerchant(cardInfo: string): AccountName {
-    if (cardInfo.includes('ending 4267') || cardInfo.includes('ending 8558')) {
+  private getAccountForMerchant(email: Email): AccountName {
+    const to = email.to;
+    //a@iling.fun
+    if (to.includes('@iling.fun')) {
       return AccountName.AssetsDBSSGDSaving;
     }
 

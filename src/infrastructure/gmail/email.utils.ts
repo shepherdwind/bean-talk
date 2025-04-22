@@ -9,6 +9,7 @@ export interface EmailHeaders {
   subject: string;
   from: string;
   date: string;
+  to: string;
 }
 
 /**
@@ -20,6 +21,7 @@ export function extractEmailHeaders(headers: gmail_v1.Schema$MessagePartHeader[]
   return {
     subject: headers.find(h => h.name === 'Subject')?.value || '',
     from: headers.find(h => h.name === 'From')?.value || '',
+    to: headers.find(h => h.name === 'To')?.value || '',
     date: headers.find(h => h.name === 'Date')?.value || ''
   };
 }

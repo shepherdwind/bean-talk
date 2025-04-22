@@ -1,6 +1,8 @@
 import { EventEmitter } from "events";
 import { logger } from "../utils/logger";
 import { getQueueEventName } from "./event-types";
+import { container } from "../utils";
+import { AutomationService } from "../../application/services/automation.service";
 
 interface QueueItem {
   event: string;
@@ -19,6 +21,12 @@ export class MessageQueueService {
   }
 
   public enqueue(event: string, data: any, taskId?: string): void {
+    // Skip if taskId already exists in queue
+    if (taskId && this.queue.some(item => item.taskId === taskId)) {
+      logger.debug(`Skipping enqueue for duplicate taskId: ${taskId}`);
+      return;
+    }
+
     const item: QueueItem = {
       event,
       data,
@@ -48,7 +56,12 @@ export class MessageQueueService {
         `Triggering queue processing after task completion: ${taskId}`
       );
       this.processQueue();
+      return;
     }
+
+    logger.debug(`Queue is empty`);
+    const automationService = container.getByClass(AutomationService);
+    automationService.scheduledCheck();
   }
 
   private async processQueue(): Promise<void> {

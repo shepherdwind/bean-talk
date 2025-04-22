@@ -9,6 +9,7 @@ import { AccountingService } from "../../domain/services/accounting.service";
 import { formatDateToUTC8 } from "../utils/date.utils";
 import { MessageQueueService } from "./message-queue.service";
 import { EventTypes, getQueueEventName } from "./event-types";
+import { getAccountByEmail } from "../utils/telegram";
 
 interface MerchantCategorySelectedEvent {
   merchantId: string;
@@ -81,10 +82,10 @@ export class EventListenerService {
       async (data: MerchantCategorizationEvent) => {
         try {
           let message =
-            `New Merchant Needs Categorization\n\n` +
+            `New Merchant Needs Categorization\n@${getAccountByEmail(data.email?.to)}\n\n` +
             `Merchant: <b>${data.merchant}</b>\n` +
             `Amount: <b>${data.amount?.value} ${data.amount?.currency}</b>\n` +
-            `Time: <b>${formatDateToUTC8(data.email?.date)}</b>\n\n`;
+            `Time: <b>${formatDateToUTC8(data.email?.date)}</b>\n`;
 
           message += `\nPlease update the merchant category use AI assistance.`;
 

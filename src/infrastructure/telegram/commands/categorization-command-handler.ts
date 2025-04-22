@@ -241,30 +241,44 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
     }
   }
 
-  async handleCategorySelection(ctx: Context, shortId: string, categoryType: string): Promise<void> {
+  private async validateCategoryContext(ctx: Context, shortId: string): Promise<{ 
+    chatId: string;
+    merchantId: string;
+    pendingCategorization: PendingCategorization;
+  } | null> {
     const chatId = ctx.chat?.id.toString();
     
     if (!chatId) {
       await ctx.answerCbQuery(MESSAGES.ERROR_CHAT_ID_NOT_FOUND);
-      return;
+      return null;
     }
 
     const categorizationData = this.categorizationMap.get(shortId);
     if (!categorizationData) {
       await ctx.answerCbQuery(MESSAGES.ERROR_CATEGORIZATION_NOT_FOUND);
-      return;
+      return null;
     }
 
-    const { merchantId, categories } = categorizationData;
-    const selectedCategory = categories[categoryType as keyof typeof categories];
-    if (!selectedCategory) {
-      await ctx.answerCbQuery(MESSAGES.ERROR_INVALID_CATEGORY_TYPE);
-      return;
-    }
-
+    const { merchantId } = categorizationData;
     const pendingCategorization = this.getPendingCategorization(merchantId);
     if (!pendingCategorization) {
       await ctx.answerCbQuery(MESSAGES.ERROR_CATEGORIZATION_NOT_FOUND);
+      return null;
+    }
+
+    return { chatId, merchantId, pendingCategorization };
+  }
+
+  async handleCategorySelection(ctx: Context, shortId: string, categoryType: string): Promise<void> {
+    const validationResult = await this.validateCategoryContext(ctx, shortId);
+    if (!validationResult) return;
+
+    const { chatId, merchantId, pendingCategorization } = validationResult;
+    const categorizationData = this.categorizationMap.get(shortId)!;
+    const selectedCategory = categorizationData.categories[categoryType as keyof typeof categorizationData.categories];
+    
+    if (!selectedCategory) {
+      await ctx.answerCbQuery(MESSAGES.ERROR_INVALID_CATEGORY_TYPE);
       return;
     }
 
@@ -282,31 +296,15 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
     );
 
     this.removePendingCategorization(merchantId);
-    // 重置用户状态为空闲
     this.commandHandlers.resetUserState(chatId);
     this.categorizationMap.delete(shortId);
   }
 
   async handleCategoryCancel(ctx: Context, shortId: string): Promise<void> {
-    const chatId = ctx.chat?.id.toString();
-    
-    if (!chatId) {
-      await ctx.answerCbQuery(MESSAGES.ERROR_CHAT_ID_NOT_FOUND);
-      return;
-    }
+    const validationResult = await this.validateCategoryContext(ctx, shortId);
+    if (!validationResult) return;
 
-    const categorizationData = this.categorizationMap.get(shortId);
-    if (!categorizationData) {
-      await ctx.answerCbQuery(MESSAGES.ERROR_CATEGORIZATION_NOT_FOUND);
-      return;
-    }
-
-    const { merchantId } = categorizationData;
-    const pendingCategorization = this.getPendingCategorization(merchantId);
-    if (!pendingCategorization) {
-      await ctx.answerCbQuery(MESSAGES.ERROR_CATEGORIZATION_NOT_FOUND);
-      return;
-    }
+    const { chatId, merchantId, pendingCategorization } = validationResult;
 
     await ctx.editMessageText(MESSAGES.CATEGORIZATION_CANCELLED);
     
@@ -318,7 +316,6 @@ export class CategorizationCommandHandler extends BaseCommandHandler {
     });
 
     this.removePendingCategorization(merchantId);
-    // 重置用户状态为空闲
     this.commandHandlers.resetUserState(chatId);
     this.categorizationMap.delete(shortId);
   }

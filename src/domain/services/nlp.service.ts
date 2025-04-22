@@ -1,12 +1,20 @@
 import { OpenAIAdapter } from '../../infrastructure/openai/openai.adapter';
 import { logger, container } from '../../infrastructure/utils';
-import { AccountType } from '../models/types';
+import { AccountType, Currency } from '../models/types';
 import { AccountingService } from './accounting.service';
+import { AccountName } from '../models/account';
 
 export interface CategoryOptions {
   primaryCategory: string;
   alternativeCategory: string;
   suggestedNewCategory: string;
+}
+
+export interface ParsedExpenseData {
+  amount: number;
+  currency: string;
+  description: string;
+  category: string;
 }
 
 export class NLPService {
@@ -49,6 +57,33 @@ Respond in exactly this format, with each option on a new line.`;
       };
     } catch (error) {
       logger.error('Error categorizing merchant:', error);
+      throw error;
+    }
+  }
+
+  async parseExpenseInput(input: string): Promise<ParsedExpenseData> {
+    try {
+      const prompt = `Please parse the following expense information and create a transaction record:
+"${input}"
+
+Please extract the following information:
+1. Amount (number)
+2. Currency (string, must be one of: ${Object.values(Currency).join(', ')}, if no currency specified, return "SGD")
+3. Description (string)
+4. Category (string, must be one of: ${Object.values(AccountName).filter(acc => acc.startsWith('Expenses:')).join(', ')})
+
+Please respond with ONLY a clean JSON object in this exact format, without any markdown formatting or additional text:
+{
+  "amount": number,
+  "currency": "string",
+  "description": "string",
+  "category": "string"
+}`;
+
+      const response = await this.openaiAdapter.processMessage(prompt, '');
+      return JSON.parse(response);
+    } catch (error) {
+      logger.error('Error parsing expense input:', error);
       throw error;
     }
   }

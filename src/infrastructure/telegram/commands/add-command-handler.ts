@@ -5,14 +5,15 @@ import { AccountingService } from '../../../domain/services/accounting.service';
 import { container } from '../../utils';
 import { Transaction } from '../../../domain/models/transaction';
 import { AccountName } from '../../../domain/models/account';
-import { Amount, Currency } from '../../../domain/models/types';
-import { OpenAIAdapter } from '../../../infrastructure/openai/openai.adapter';
+import { Currency } from '../../../domain/models/types';
 import { Telegraf } from 'telegraf';
 import { CommandHandlers, UserState } from '../command-handlers';
+import { getCashAccount } from '../../utils/telegram';
+import { NLPService } from '../../../domain/services/nlp.service';
 
 export class AddCommandHandler extends BaseCommandHandler {
   private accountingService: AccountingService;
-  private openaiAdapter: OpenAIAdapter;
+  private nlpService: NLPService;
   private bot: Telegraf;
   private commandHandlers: CommandHandlers;
 
@@ -21,7 +22,7 @@ export class AddCommandHandler extends BaseCommandHandler {
     this.bot = bot;
     this.commandHandlers = commandHandlers;
     this.accountingService = container.getByClass(AccountingService);
-    this.openaiAdapter = container.getByClass(OpenAIAdapter);
+    this.nlpService = container.getByClass(NLPService);
 
     // Set up callback query handler
     this.bot.on('callback_query', async (ctx, next) => {
@@ -117,36 +118,14 @@ export class AddCommandHandler extends BaseCommandHandler {
       }
 
       // Determine which account to use based on username
-      let account: AccountName;
-      if (username.toLowerCase() === 'lingerzou') {
-        account = AccountName.AssetsCashWife;
-      } else if (username.toLowerCase() === 'ewardsong') {
-        account = AccountName.AssetsCash;
-      } else {
+      const account = getCashAccount(username);
+      if (!account) {
         await ctx.reply('Sorry, you do not have permission to use this feature.');
         return;
       }
 
-      // Use AI to parse the input and create a transaction
-      const prompt = `Please parse the following expense information and create a transaction record:
-"${input}"
-
-Please extract the following information:
-1. Amount (number)
-2. Currency (string, must be one of: ${Object.values(Currency).join(', ')}, if no currency specified, return "SGD")
-3. Description (string)
-4. Category (string, must be one of: ${Object.values(AccountName).filter(acc => acc.startsWith('Expenses:')).join(', ')})
-
-Please respond with ONLY a clean JSON object in this exact format, without any markdown formatting or additional text:
-{
-  "amount": number,
-  "currency": "string",
-  "description": "string",
-  "category": "string"
-}`;
-
-      const response = await this.openaiAdapter.processMessage(prompt, '');
-      const transactionData = JSON.parse(response);
+      // Use NLP service to parse the input and create a transaction
+      const transactionData = await this.nlpService.parseExpenseInput(input);
 
       // Create transaction object
       const transaction: Transaction = {
