@@ -57,9 +57,9 @@ export class AddCommandHandler extends BaseCommandHandler {
       return false; // Don't process this message
     }
 
-    // Check if user is in adding bill state
+    // Check if user is in adding bill state or idle state
     const userState = this.commandHandlers.getUserState(chatId);
-    if (userState !== UserState.ADDING_BILL) {
+    if (userState !== UserState.ADDING_BILL && userState !== UserState.IDLE) {
       return false; // Don't process this message
     }
 
@@ -78,6 +78,11 @@ export class AddCommandHandler extends BaseCommandHandler {
     }
 
     try {
+      // If user is in IDLE state, set it to ADDING_BILL
+      if (userState === UserState.IDLE) {
+        this.commandHandlers.setUserState(chatId, UserState.ADDING_BILL);
+      }
+      
       await this.processBillInput(ctx, text);
       return true; // Message handled
     } catch (error) {
@@ -87,12 +92,22 @@ export class AddCommandHandler extends BaseCommandHandler {
     }
   }
 
+  private generateTransactionMessage(transaction: Transaction, status?: string): string {
+    return (
+      `Transaction Details ${status || ''}\n\n` +
+      `Amount: <b>${transaction.entries[0].amount.value} ${transaction.entries[0].amount.currency}</b>\n` +
+      `Description: ${transaction.description}\n` +
+      `Account: ${transaction.entries[0].account}\n` +
+      `Category: <b>${transaction.entries[1].account}</b>`
+    );
+  }
+
   private async processBillInput(ctx: Context, input: string): Promise<void> {
     const chatId = ctx.chat?.id.toString();
     if (!chatId) return;
 
     try {
-      await ctx.reply('Processing your bill information...');
+      // await ctx.reply('Processing your bill information...');
 
       // Get the username from the message
       const username = ctx.from?.username;
@@ -154,24 +169,20 @@ Please respond with ONLY a clean JSON object in this exact format, without any m
           }
         ],
         metadata: {
-          telegramUsername: username
+          username,
+          message: input,
         }
       };
 
       // Send confirmation message with buttons
-      const message = 
-        'Please confirm the following transaction:\n\n' +
-        `Amount: ${transactionData.amount} ${transactionData.currency}\n` +
-        `Description: ${transactionData.description}\n` +
-        `Account: ${account}\n` +
-        `Category: ${transactionData.category}\n\n` +
-        'Please select:';
+      const message = this.generateTransactionMessage(transaction);
 
       // Store transaction data in user state for later use
       this.commandHandlers.setTransactionData(chatId, transaction);
 
       // Send confirmation buttons
       await ctx.reply(message, {
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             [
@@ -204,11 +215,6 @@ Please respond with ONLY a clean JSON object in this exact format, without any m
       return true;
     }
 
-    // Remove the buttons from the message
-    if (callbackQuery.message?.message_id) {
-      await ctx.editMessageReplyMarkup({ inline_keyboard: [] });
-    }
-
     if (callbackQuery.data === 'add_confirm') {
       try {
         // Save transaction
@@ -217,9 +223,10 @@ Please respond with ONLY a clean JSON object in this exact format, without any m
         // Clear transaction data
         this.commandHandlers.clearTransactionData(chatId);
 
-        // Send success message
+        // Update the original message
+        const successMessage = this.generateTransactionMessage(transaction, '✅');
+        await ctx.editMessageText(successMessage, { parse_mode: 'HTML' });
         await ctx.answerCbQuery('Transaction saved!');
-        await ctx.reply('✅ Transaction successfully saved!');
       } catch (error) {
         this.logger.error('Error saving transaction:', error);
         await ctx.answerCbQuery('Error saving transaction, please try again.');
@@ -228,8 +235,9 @@ Please respond with ONLY a clean JSON object in this exact format, without any m
       // Clear transaction data
       this.commandHandlers.clearTransactionData(chatId);
 
-      // Send cancellation message
-      await ctx.answerCbQuery('Transaction cancelled');
+      // Update the original message
+      const cancelMessage = this.generateTransactionMessage(transaction, '❌');
+      await ctx.editMessageText(cancelMessage, { parse_mode: 'HTML' });
       await ctx.reply('Transaction cancelled.');
     }
 

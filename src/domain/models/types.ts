@@ -4,9 +4,6 @@
 export enum Currency {
   CNY = 'CNY', // Chinese Yuan
   USD = 'USD', // US Dollar
-  EUR = 'EUR', // Euro
-  JPY = 'JPY', // Japanese Yen
-  GBP = 'GBP', // British Pound
   SGD = 'SGD', // Singapore Dollar
 }
 
