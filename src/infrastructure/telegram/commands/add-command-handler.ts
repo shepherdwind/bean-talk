@@ -96,10 +96,10 @@ export class AddCommandHandler extends BaseCommandHandler {
   private generateTransactionMessage(transaction: Transaction, status?: string): string {
     return (
       `Transaction Details ${status || ''}\n\n` +
-      `Amount: <b>${transaction.entries[0].amount.value} ${transaction.entries[0].amount.currency}</b>\n` +
+      `Amount: <b>${transaction.entries[1].amount.value} ${transaction.entries[0].amount.currency}</b>\n` +
       `Description: ${transaction.description}\n` +
-      `Account: ${transaction.entries[0].account}\n` +
-      `Category: <b>${transaction.entries[1].account}</b>`
+      `From: ${transaction.entries[0].account}\n` +
+      `TO: <b>${transaction.entries[1].account}</b>`
     );
   }
 
@@ -135,14 +135,14 @@ export class AddCommandHandler extends BaseCommandHandler {
           {
             account: account,
             amount: {
-              value: transactionData.amount,
+              value: -transactionData.amount,
               currency: transactionData.currency as Currency
             }
           },
           {
             account: transactionData.category as AccountName,
             amount: {
-              value: -transactionData.amount,
+              value: transactionData.amount,
               currency: transactionData.currency as Currency
             }
           }

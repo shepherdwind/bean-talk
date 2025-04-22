@@ -148,7 +148,11 @@ export class DBSEmailParser implements EmailParser {
     const entries: Entry[] = [
       {
         account: params.account,
-        amount: amountObj,
+        // Negative for Assets account
+        amount: {
+          ...amountObj,
+          value: -amountObj.value,
+        },
         metadata: {
           merchant,
           cardInfo,
@@ -156,10 +160,7 @@ export class DBSEmailParser implements EmailParser {
       },
       {
         account: category,
-        amount: {
-          ...amountObj,
-          value: -amount, // Negative for expense
-        },
+        amount: amountObj,
       },
     ];
 
