@@ -13,8 +13,9 @@ RUN apk add --no-cache \
     libxslt-dev \
     zlib-dev
 
-# Install Beancount
-RUN pip3 install --no-cache-dir beancount
+# Install pipx and Beancount
+RUN pip install --no-cache-dir pipx && \
+    pipx install beancount
 
 # Copy package files
 COPY package*.json ./
@@ -43,8 +44,9 @@ RUN apk add --no-cache \
     libxslt-dev \
     zlib-dev
 
-# Install Beancount
-RUN pip3 install --no-cache-dir beancount
+# Install pipx and Beancount
+RUN pip install --no-cache-dir pipx && \
+    pipx install beancount
 
 # Copy package files
 COPY package*.json ./
