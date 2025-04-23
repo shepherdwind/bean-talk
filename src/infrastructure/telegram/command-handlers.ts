@@ -35,7 +35,7 @@ export class CommandHandlers {
       this
     );
     
-    this.queryHandler = new QueryCommandHandler();
+    this.queryHandler = new QueryCommandHandler(bot);
     this.addHandler = new AddCommandHandler(bot, this);
     
     this.setupMessageHandler();
@@ -159,6 +159,16 @@ export class CommandHandlers {
         await this.addHandler.handle(ctx);
       } catch (error) {
         this.logger.error('Error handling add command:', error);
+        await ctx.reply('Sorry, I encountered an error while processing your command.');
+      }
+    });
+
+    // Set up query command
+    this.bot.command('query', async (ctx) => {
+      try {
+        await this.queryHandler.handle(ctx);
+      } catch (error) {
+        this.logger.error('Error handling query command:', error);
         await ctx.reply('Sorry, I encountered an error while processing your command.');
       }
     });
