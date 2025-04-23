@@ -1,18 +1,17 @@
 # Build stage
-FROM node:20-slim AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 # Install Python and Beancount dependencies
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
     python3 \
-    python3-pip \
+    py3-pip \
     python3-dev \
-    build-essential \
+    build-base \
     libxml2-dev \
-    libxslt1-dev \
-    zlib1g-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libxslt-dev \
+    zlib-dev
 
 # Install Beancount
 RUN pip3 install --no-cache-dir beancount
@@ -30,20 +29,19 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:20-slim
+FROM node:20-alpine
 
 WORKDIR /app
 
 # Install Python and Beancount dependencies
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
     python3 \
-    python3-pip \
+    py3-pip \
     python3-dev \
-    build-essential \
+    build-base \
     libxml2-dev \
-    libxslt1-dev \
-    zlib1g-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libxslt-dev \
+    zlib-dev
 
 # Install Beancount
 RUN pip3 install --no-cache-dir beancount
