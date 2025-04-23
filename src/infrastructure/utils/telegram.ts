@@ -1,6 +1,6 @@
 import { AccountName } from "../../domain/models/account";
 
-const TG_ACCOUNTS = ["LingerZou", "ewardsong"];
+export const TG_ACCOUNTS = ["LingerZou", "ewardsong"];
 
 export const ACCOUNT_TELEGRAM_MAP: Partial<Record<AccountName, string>> = {
   [AccountName.AssetsDBSSGDWife]: TG_ACCOUNTS[0],

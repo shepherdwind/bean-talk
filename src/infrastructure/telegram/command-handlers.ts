@@ -1,7 +1,7 @@
-import { Context } from 'telegraf';
+import { Telegraf, Context } from 'telegraf';
 import { ILogger, container, Logger } from '../utils';
+import { TG_ACCOUNTS } from '../utils/telegram';
 import { PendingCategorization } from './types';
-import { Telegraf } from 'telegraf';
 import { CategorizationCommandHandler } from './commands/categorization-command-handler';
 import { QueryCommandHandler } from './commands/query-command-handler';
 import { AddCommandHandler } from './commands/add-command-handler';
@@ -44,6 +44,13 @@ export class CommandHandlers {
 
   private setupMessageHandler(): void {
     this.bot.on('message', async (ctx, next) => {
+      // Check if message is from whitelisted user
+      const username = ctx.from?.username;
+      if (!username || !TG_ACCOUNTS.includes(username)) {
+        this.logger.debug(`Ignoring message from non-whitelisted user: ${username}`);
+        return;
+      }
+
       // 如果不是文本消息，直接传递给下一个处理器
       if (!this.isTextMessage(ctx)) {
         return next();
