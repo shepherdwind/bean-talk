@@ -20,11 +20,10 @@ export function formatQueryResult(result: ProcessedQueryResult): string {
 
   // Add user spending details
   const USER_COLUMN_WIDTH = 12;
-  const AMOUNT_COLUMN_WIDTH = 10;
+  const AMOUNT_COLUMN_WIDTH = 15;
   
   message += '<code>';
-  message += `User${' '.repeat(USER_COLUMN_WIDTH - 4)}Amount\n`;
-  message += '─'.repeat(USER_COLUMN_WIDTH) + '\n';
+  message += `User${' '.repeat(USER_COLUMN_WIDTH - 4)}${'Amount'.padStart(AMOUNT_COLUMN_WIDTH)}\n`;
   
   for (const [username, amount] of Object.entries(userSpending)) {
     const userText = `@${username}`;
@@ -37,11 +36,10 @@ export function formatQueryResult(result: ProcessedQueryResult): string {
 
   // Format expenses section
   message += '📊 <b>Expenses by Category</b>\n';
-  const CATEGORY_COLUMN_WIDTH = 15;
+  const CATEGORY_COLUMN_WIDTH = 10;
   
   message += '<code>';
-  message += `Category${' '.repeat(CATEGORY_COLUMN_WIDTH - 8)}Amount\n`;
-  message += '─'.repeat(CATEGORY_COLUMN_WIDTH) + '\n';
+  message += `Category${' '.repeat(CATEGORY_COLUMN_WIDTH - 8)}${'Amount'.padStart(AMOUNT_COLUMN_WIDTH)}\n`;
   
   for (const expense of result.expenses) {
     const category = expense.category.split(':')[1] || expense.category;

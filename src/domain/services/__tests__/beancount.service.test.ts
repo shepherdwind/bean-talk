@@ -58,6 +58,36 @@ describe('BeancountService', () => {
       const result = service.transactionToBeancount(transaction);
       expect(result).toBe(expected);
     });
+
+    it('should add internal-transfer tag for asset-to-asset transfers', () => {
+      const transaction: Transaction = {
+        date: new Date('2024-03-15'),
+        description: 'Transfer to savings',
+        entries: [
+          {
+            account: AccountName.AssetsICBCSGDSavings,
+            amount: {
+              value: 100.50,
+              currency: Currency.CNY
+            }
+          },
+          {
+            account: AccountName.AssetsDBSSGDSaving,
+            amount: {
+              value: -100.50,
+              currency: Currency.CNY
+            }
+          }
+        ]
+      };
+
+      const expected = `2024-03-15 * "Transfer to savings" #internal-transfer
+  Assets:ICBC:SGD:Savings  100.50 CNY
+  Assets:DBS:SGD:Saving  -100.50 CNY`;
+
+      const result = service.transactionToBeancount(transaction);
+      expect(result).toBe(expected);
+    });
   });
 
   describe('appendTransaction', () => {
@@ -122,6 +152,13 @@ describe('BeancountService', () => {
               value: 100.50,
               currency: Currency.CNY
             }
+          },
+          {
+            account: AccountName.ExpensesFood,
+            amount: {
+              value: -100.50,
+              currency: Currency.CNY
+            }
           }
         ]
       };
@@ -130,7 +167,8 @@ describe('BeancountService', () => {
 
       const content = await fs.readFile(testFilePath, 'utf-8');
       const expected = `2024-03-15 * "Test transaction"
-  Assets:ICBC:SGD:Savings  100.50 CNY`;
+  Assets:ICBC:SGD:Savings  100.50 CNY
+  Expenses:Food  -100.50 CNY`;
 
       expect(content.trim()).toBe(expected);
     });

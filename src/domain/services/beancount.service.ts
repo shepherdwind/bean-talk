@@ -26,8 +26,17 @@ export class BeancountService {
     const date = transaction.date.toISOString().split('T')[0];
     const lines: string[] = [];
 
+    // Check if all entries are Asset accounts
+    const isInternalTransfer = transaction.entries.every(entry => 
+      entry.account.startsWith('Assets:')
+    );
+
     // Add transaction header
-    lines.push(`${date} * "${transaction.description}"`);
+    let header = `${date} * "${transaction.description}"`;
+    if (isInternalTransfer) {
+      header += ' #internal-transfer';
+    }
+    lines.push(header);
 
     // Add entries
     for (const entry of transaction.entries) {

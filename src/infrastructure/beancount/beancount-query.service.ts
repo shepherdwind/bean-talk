@@ -81,7 +81,7 @@ export class BeancountQueryService {
       startDate
     )} AND date < ${formatDateToYYYYMMDD(
       endDate
-    )} GROUP BY account ORDER BY ps;`;
+    )} AND NOT 'internal-transfer' IN tags GROUP BY account ORDER BY ps;`;
     logger.debug(`Executing Beancount query: ${query}`);
     const rawResult = await this.executeQuery(query);
     return this.processQueryResult(rawResult);
