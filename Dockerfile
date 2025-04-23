@@ -3,8 +3,8 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install Python3
-RUN apk add --no-cache python3
+# Install Python3 and build dependencies
+RUN apk add --no-cache python3 build-base libxml2-dev libxslt-dev git
 
 # Copy package files
 COPY package*.json ./
@@ -23,8 +23,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install Python3
-RUN apk add --no-cache python3
+# Install Python3 and build dependencies
+RUN apk add --no-cache python3 build-base libxml2-dev libxslt-dev git
 
 # Copy package files
 COPY package*.json ./
@@ -34,6 +34,18 @@ RUN npm install --production
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
+
+# Copy requirements.txt
+COPY requirements.txt .
+
+# Install beancount
+ARG BEANCOUNT_VERSION=2.3.6
+RUN git clone https://github.com/beancount/beancount /tmp/beancount && \
+    cd /tmp/beancount && \
+    git checkout ${BEANCOUNT_VERSION} && \
+    CFLAGS=-s pip3 install -U /tmp/beancount && \
+    pip3 install -r /app/requirements.txt && \
+    rm -rf /tmp/beancount
 
 # Expose the port the app runs on
 EXPOSE 3000
