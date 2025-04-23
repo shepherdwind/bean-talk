@@ -3,6 +3,7 @@ import { BaseCommandHandler } from './base-command-handler';
 import { Markup } from 'telegraf';
 import { BeancountQueryService } from '../../beancount/beancount-query.service';
 import { container } from '../../utils';
+import { formatQueryResult } from '../../utils/query-result-formatter';
 
 export enum TimeRange {
   TODAY = 'query_today',
@@ -12,6 +13,15 @@ export enum TimeRange {
   THIS_MONTH = 'query_this_month',
   LAST_MONTH = 'query_last_month'
 }
+
+const TimeRangeDisplayText: Record<TimeRange, string> = {
+  [TimeRange.TODAY]: 'Today',
+  [TimeRange.YESTERDAY]: 'Yesterday',
+  [TimeRange.THIS_WEEK]: 'This Week',
+  [TimeRange.LAST_WEEK]: 'Last Week',
+  [TimeRange.THIS_MONTH]: 'This Month',
+  [TimeRange.LAST_MONTH]: 'Last Month'
+};
 
 export class QueryCommandHandler extends BaseCommandHandler {
   private bot: Telegraf;
@@ -40,16 +50,16 @@ export class QueryCommandHandler extends BaseCommandHandler {
   async handle(ctx: Context, ...args: any[]): Promise<void> {
     const keyboard = Markup.inlineKeyboard([
       [
-        Markup.button.callback('Today', TimeRange.TODAY),
-        Markup.button.callback('Yesterday', TimeRange.YESTERDAY)
+        Markup.button.callback(TimeRangeDisplayText[TimeRange.TODAY], TimeRange.TODAY),
+        Markup.button.callback(TimeRangeDisplayText[TimeRange.YESTERDAY], TimeRange.YESTERDAY)
       ],
       [
-        Markup.button.callback('This Week', TimeRange.THIS_WEEK),
-        Markup.button.callback('Last Week', TimeRange.LAST_WEEK)
+        Markup.button.callback(TimeRangeDisplayText[TimeRange.THIS_WEEK], TimeRange.THIS_WEEK),
+        Markup.button.callback(TimeRangeDisplayText[TimeRange.LAST_WEEK], TimeRange.LAST_WEEK)
       ],
       [
-        Markup.button.callback('This Month', TimeRange.THIS_MONTH),
-        Markup.button.callback('Last Month', TimeRange.LAST_MONTH)
+        Markup.button.callback(TimeRangeDisplayText[TimeRange.THIS_MONTH], TimeRange.THIS_MONTH),
+        Markup.button.callback(TimeRangeDisplayText[TimeRange.LAST_MONTH], TimeRange.LAST_MONTH)
       ]
     ]);
 
@@ -79,15 +89,33 @@ export class QueryCommandHandler extends BaseCommandHandler {
     }
   }
 
+  private async processQuery(ctx: Context, startDate: Date, endDate: Date, timeRange: TimeRange): Promise<void> {
+    try {
+      // Adjust dates to include the full range
+      const adjustedStartDate = new Date(startDate);
+      adjustedStartDate.setDate(adjustedStartDate.getDate() - 1);
+      const adjustedEndDate = new Date(endDate);
+      adjustedEndDate.setDate(adjustedEndDate.getDate() + 1);
+
+      await ctx.reply(`Querying transactions for ${TimeRangeDisplayText[timeRange]}...`);
+      const result = await this.beancountService.queryByDateRange(adjustedStartDate, adjustedEndDate);
+      const formattedMessage = formatQueryResult(result);
+      await ctx.reply(formattedMessage, { parse_mode: 'HTML' });
+    } catch (error) {
+      console.error('Error processing query:', error);
+      await ctx.reply('Sorry, I encountered an error while processing your query.');
+    }
+  }
+
   private async handleToday(ctx: Context): Promise<void> {
     const today = new Date();
-    await this.processQuery(ctx, today, today);
+    await this.processQuery(ctx, today, today, TimeRange.TODAY);
   }
 
   private async handleYesterday(ctx: Context): Promise<void> {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    await this.processQuery(ctx, yesterday, yesterday);
+    await this.processQuery(ctx, yesterday, yesterday, TimeRange.YESTERDAY);
   }
 
   private async handleThisWeek(ctx: Context): Promise<void> {
@@ -96,7 +124,7 @@ export class QueryCommandHandler extends BaseCommandHandler {
     startOfWeek.setDate(today.getDate() - today.getDay());
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
-    await this.processQuery(ctx, startOfWeek, endOfWeek);
+    await this.processQuery(ctx, startOfWeek, endOfWeek, TimeRange.THIS_WEEK);
   }
 
   private async handleLastWeek(ctx: Context): Promise<void> {
@@ -105,37 +133,20 @@ export class QueryCommandHandler extends BaseCommandHandler {
     startOfLastWeek.setDate(today.getDate() - today.getDay() - 7);
     const endOfLastWeek = new Date(startOfLastWeek);
     endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
-    await this.processQuery(ctx, startOfLastWeek, endOfLastWeek);
+    await this.processQuery(ctx, startOfLastWeek, endOfLastWeek, TimeRange.LAST_WEEK);
   }
 
   private async handleThisMonth(ctx: Context): Promise<void> {
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    await this.processQuery(ctx, startOfMonth, endOfMonth);
+    await this.processQuery(ctx, startOfMonth, endOfMonth, TimeRange.THIS_MONTH);
   }
 
   private async handleLastMonth(ctx: Context): Promise<void> {
     const today = new Date();
     const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-    await this.processQuery(ctx, startOfLastMonth, endOfLastMonth);
-  }
-
-  private async processQuery(ctx: Context, startDate: Date, endDate: Date): Promise<void> {
-    try {
-      // Adjust dates to include the full range
-      const adjustedStartDate = new Date(startDate);
-      adjustedStartDate.setDate(adjustedStartDate.getDate() - 1);
-      const adjustedEndDate = new Date(endDate);
-      adjustedEndDate.setDate(adjustedEndDate.getDate() + 1);
-
-      await ctx.reply('Processing your query...');
-      const result = await this.beancountService.queryByDateRange(adjustedStartDate, adjustedEndDate);
-      await ctx.reply(`Query results for ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}:\n\n${result}`);
-    } catch (error) {
-      console.error('Error processing query:', error);
-      await ctx.reply('Sorry, I encountered an error while processing your query.');
-    }
+    await this.processQuery(ctx, startOfLastMonth, endOfLastMonth, TimeRange.LAST_MONTH);
   }
 } 

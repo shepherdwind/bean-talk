@@ -6,7 +6,7 @@ import path from "path";
 
 const execAsync = promisify(exec);
 
-interface ProcessedQueryResult {
+export interface ProcessedQueryResult {
   assets: {
     account: string;
     amount: number;

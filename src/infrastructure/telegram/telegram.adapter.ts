@@ -42,8 +42,9 @@ export class TelegramAdapter {
   private async setupCommands(): Promise<void> {
     try {
       await this.bot.telegram.setMyCommands([
-        { command: 'start', description: 'Start the bot and see welcome message' },
-        { command: 'add', description: 'Add a new bill' }
+        { command: 'start', description: 'Start the bot' },
+        { command: 'add', description: 'Add a new bill' },
+        { command: 'query', description: 'Query transactions' }
       ]);
     } catch (error) {
       this.logger.error('Failed to set up bot commands:', error);

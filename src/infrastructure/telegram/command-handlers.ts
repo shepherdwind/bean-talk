@@ -192,15 +192,6 @@ export class CommandHandlers {
     await ctx.reply('👋 Welcome to Bean Talk! I\'m here to help you manage your finances.\n\nI can help you:\n- Categorize merchants\n- Query your transactions\n- Add new bills\n- And more coming soon!');
   }
 
-  async handleMessage(ctx: Context): Promise<void> {
-    try {
-      await this.categorizationHandler.handleMessage(ctx);
-    } catch (error) {
-      this.logger.error('Error handling message:', error);
-      await ctx.reply('Sorry, I encountered an error while processing your message.');
-    }
-  }
-
   // 发送通知
   async sendNotification(chatId: string, message: string, merchantId?: string, categorizationData?: PendingCategorization): Promise<void> {
     try {
