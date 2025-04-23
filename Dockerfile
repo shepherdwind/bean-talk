@@ -4,7 +4,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install Python3 and build dependencies
-RUN apk add --no-cache python3 build-base libxml2-dev libxslt-dev git
+RUN apk add --no-cache python3 build-base libxml2-dev libxslt-dev git py3-pip
 
 # Copy package files
 COPY package*.json ./
@@ -24,7 +24,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install Python3 and build dependencies
-RUN apk add --no-cache python3 build-base libxml2-dev libxslt-dev git
+RUN apk add --no-cache python3 build-base libxml2-dev libxslt-dev git py3-pip
 
 # Copy package files
 COPY package*.json ./
