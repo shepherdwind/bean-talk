@@ -19,6 +19,15 @@ export const getCashAccount = (username: string) => {
   return null;
 };
 
+export const getCardAccount = (email: string): AccountName => {
+  //a@iling.fun
+  if (email.includes("@iling.fun")) {
+    return AccountName.AssetsDBSSGDSaving;
+  }
+
+  return AccountName.AssetsDBSSGDWife;
+};
+
 export const getAccountByEmail = (email?: string) => {
   if (!email) return null;
 

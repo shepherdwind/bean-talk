@@ -1,6 +1,5 @@
 import { Telegraf } from 'telegraf';
 import { ILogger, container, Logger } from '../utils';
-import { NLPService } from '../../domain/services/nlp.service';
 import { CommandHandlers } from './command-handlers';
 import { PendingCategorization } from './types';
 

@@ -9,8 +9,7 @@ import { container } from "../utils";
 import { AccountingService } from "../../domain/services/accounting.service";
 import { extractTransactionData, TransactionData } from "./dbs-transaction-extractor";
 import { EventTypes } from '../events/event-types';
-import { formatDateToUTC8 } from "../utils/date.utils";
-
+import { getCardAccount } from "../utils/telegram";
 /**
  * Interface for transaction creation parameters
  */
@@ -72,22 +71,12 @@ export class DBSEmailParser implements EmailParser {
       // Create transaction entries
       return this.createTransaction({
         date, merchant, amount, currency, cardInfo, category, emailId: email.id,
-        account: this.getAccountForMerchant(email)
+        account: getCardAccount(email.to)
       });
     } catch (error) {
       logger.error("Error parsing DBS email:", error);
       return null;
     }
-  }
-  
-  private getAccountForMerchant(email: Email): AccountName {
-    const to = email.to;
-    //a@iling.fun
-    if (to.includes('@iling.fun')) {
-      return AccountName.AssetsDBSSGDSaving;
-    }
-
-    return AccountName.AssetsDBSSGDWife;
   }
 
   /**
