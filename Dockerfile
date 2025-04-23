@@ -38,14 +38,19 @@ COPY --from=builder /app/dist ./dist
 # Copy requirements.txt
 COPY requirements.txt .
 
-# Install beancount
+# Set up Python virtual environment and install beancount
 ARG BEANCOUNT_VERSION=2.3.6
-RUN git clone https://github.com/beancount/beancount /tmp/beancount && \
+RUN python3 -m venv /app/venv && \
+    . /app/venv/bin/activate && \
+    git clone https://github.com/beancount/beancount /tmp/beancount && \
     cd /tmp/beancount && \
     git checkout ${BEANCOUNT_VERSION} && \
-    CFLAGS=-s pip3 install -U /tmp/beancount && \
-    pip3 install -r /app/requirements.txt && \
+    CFLAGS=-s pip install -U /tmp/beancount && \
+    pip install -r /app/requirements.txt && \
     rm -rf /tmp/beancount
+
+# Add virtual environment to PATH
+ENV PATH="/app/venv/bin:$PATH"
 
 # Expose the port the app runs on
 EXPOSE 3000
