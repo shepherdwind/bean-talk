@@ -36,3 +36,4 @@ token.json
 *.beancount
 data
 bill
+config/

@@ -24,6 +24,7 @@ describe('DBSEmailParser', () => {
         id: 'test-id',
         subject: 'Card Transaction Alert',
         from: 'ibanking.alert@dbs.com',
+        to: 'test@iling.fun',
         body: 'test body'
       };
 
@@ -35,6 +36,7 @@ describe('DBSEmailParser', () => {
         id: 'test-id',
         subject: 'Other Subject',
         from: 'other@example.com',
+        to: 'test@iling.fun',
         body: 'test body'
       };
 
@@ -60,6 +62,7 @@ Please do not reply to this email as it is auto generated`;
         id: 'test-id',
         subject: 'Card Transaction Alert',
         from: 'ibanking.alert@dbs.com',
+        to: 'test@iling.fun',
         body: emailBody
       };
 
@@ -82,7 +85,7 @@ Please do not reply to this email as it is auto generated`;
         // Check first entry (DBS account)
         expect(result.entries[0].account).toBe(AccountName.AssetsDBSSGDSaving);
         expect(result.entries[0].amount).toEqual({
-          value: 20.00,
+          value: -20.00,
           currency: Currency.USD
         });
         expect(result.entries[0].metadata).toEqual({
@@ -93,7 +96,7 @@ Please do not reply to this email as it is auto generated`;
         // Check second entry (Expense)
         expect(result.entries[1].account).toBe(AccountName.ExpensesShoppingOnline);
         expect(result.entries[1].amount).toEqual({
-          value: -20.00,
+          value: 20,
           currency: Currency.USD
         });
 
@@ -118,6 +121,7 @@ Please do not reply to this email as it is auto generated`;
         id: 'test-id',
         subject: 'Card Transaction Alert',
         from: 'ibanking.alert@dbs.com',
+        to: 'test@iling.fun',
         body: emailBody
       };
 
@@ -140,7 +144,7 @@ Please do not reply to this email as it is auto generated`;
         // Check first entry (DBS account)
         expect(result.entries[0].account).toBe(AccountName.AssetsDBSSGDSaving);
         expect(result.entries[0].amount).toEqual({
-          value: 12000.00,
+          value: -12000.00,
           currency: Currency.SGD
         });
         expect(result.entries[0].metadata).toEqual({
@@ -151,7 +155,7 @@ Please do not reply to this email as it is auto generated`;
         // Check second entry (Expense)
         expect(result.entries[1].account).toBe(AccountName.ExpensesShoppingOnline);
         expect(result.entries[1].amount).toEqual({
-          value: -12000.00,
+          value: 12000.00,
           currency: Currency.SGD
         });
 
@@ -172,6 +176,7 @@ Please do not reply to this email as it is auto generated`;
         id: 'test-id',
         subject: 'Card Transaction Alert',
         from: 'ibanking.alert@dbs.com',
+        to: 'test@iling.fun',
         body: emailBody
       };
 
@@ -195,7 +200,7 @@ Please do not reply to this email as it is auto generated`;
         // Check first entry (DBS account)
         expect(result.entries[0].account).toBe(AccountName.AssetsDBSSGDSaving);
         expect(result.entries[0].amount).toEqual({
-          value: 3800.00,
+          value: -3800.00,
           currency: Currency.SGD
         });
         expect(result.entries[0].metadata).toEqual({
@@ -206,7 +211,7 @@ Please do not reply to this email as it is auto generated`;
         // Check second entry (Expense)
         expect(result.entries[1].account).toBe(AccountName.ExpensesShoppingOnline);
         expect(result.entries[1].amount).toEqual({
-          value: -3800.00,
+          value: 3800.00,
           currency: Currency.SGD
         });
 
@@ -219,6 +224,7 @@ Please do not reply to this email as it is auto generated`;
         id: 'test-id',
         subject: 'Card Transaction Alert',
         from: 'ibanking.alert@dbs.com',
+        to: 'test@iling.fun',
         body: 'Invalid email body without required fields'
       };
 
