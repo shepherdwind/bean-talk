@@ -21,8 +21,8 @@ export class BeancountQueryService {
   private readonly beanFile: string;
   private readonly beanQueryCommand: string;
 
-  constructor(beanFile: string) {
-    this.beanFile = path.join(process.env.BEANCOUNT_FILE_PATH || "", beanFile);
+  constructor() {
+    this.beanFile = path.join(process.env.BEANCOUNT_FILE_PATH || "", 'main.bean');
     this.beanQueryCommand = process.env.BEAN_QUERY_COMMAND || "bean-query";
     logger.info(
       `Initialized BeancountQueryService with bean file: ${this.beanFile} and command: ${this.beanQueryCommand}`

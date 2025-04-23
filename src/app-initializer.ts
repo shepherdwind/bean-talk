@@ -14,9 +14,6 @@ import { EventListenerService } from './infrastructure/events/event-listener.ser
 import { ApplicationEventEmitter } from './infrastructure/events/event-emitter';
 import { BeancountQueryService } from './infrastructure/beancount/beancount-query.service';
 
-// Constants
-const BEANCOUNT_FILE_PATH = 'main.bean';
-
 /**
  * 初始化依赖注入容器和基础服务
  */
@@ -48,7 +45,7 @@ export async function initializeContainer(): Promise<void> {
   });
 
   // Register BeancountQueryService with hardcoded path
-  const beancountQueryService = new BeancountQueryService(BEANCOUNT_FILE_PATH);
+  const beancountQueryService = new BeancountQueryService();
   container.registerClass(BeancountQueryService, beancountQueryService);
 
   // Register NLPService

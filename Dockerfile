@@ -3,6 +3,15 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
+# Install Python and Beancount dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Beancount
+RUN pip3 install beancount
+
 # Copy package files
 COPY package*.json ./
 
@@ -19,6 +28,15 @@ RUN npm run build
 FROM node:20-slim
 
 WORKDIR /app
+
+# Install Python and Beancount dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Beancount
+RUN pip3 install beancount
 
 # Copy package files
 COPY package*.json ./
