@@ -13,9 +13,12 @@ RUN apk add --no-cache \
     libxslt-dev \
     zlib-dev
 
-# Install pipx and Beancount
-RUN pip install --no-cache-dir pipx && \
-    pipx install beancount
+# Create and activate virtual environment
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Beancount in virtual environment
+RUN pip install --no-cache-dir beancount
 
 # Copy package files
 COPY package*.json ./
@@ -44,9 +47,12 @@ RUN apk add --no-cache \
     libxslt-dev \
     zlib-dev
 
-# Install pipx and Beancount
-RUN pip install --no-cache-dir pipx && \
-    pipx install beancount
+# Create and activate virtual environment
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Beancount in virtual environment
+RUN pip install --no-cache-dir beancount
 
 # Copy package files
 COPY package*.json ./
