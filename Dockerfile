@@ -7,10 +7,15 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
+    python3-dev \
+    build-essential \
+    libxml2-dev \
+    libxslt1-dev \
+    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Beancount
-RUN pip3 install beancount
+RUN pip3 install --no-cache-dir beancount
 
 # Copy package files
 COPY package*.json ./
@@ -33,10 +38,15 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
+    python3-dev \
+    build-essential \
+    libxml2-dev \
+    libxslt1-dev \
+    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Beancount
-RUN pip3 install beancount
+RUN pip3 install --no-cache-dir beancount
 
 # Copy package files
 COPY package*.json ./
@@ -51,4 +61,4 @@ COPY --from=builder /app/dist ./dist
 EXPOSE 3000
 
 # Start the application
-CMD ["npm", "start"] 
+CMD ["npm", "start"]
