@@ -86,7 +86,17 @@ export class Logger implements ILogger {
 
   private getTimestamp(): string {
     const now = new Date();
-    return now.toISOString();
+    const options: Intl.DateTimeFormatOptions = {
+      timeZone: 'Asia/Singapore',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    };
+    return new Intl.DateTimeFormat('en-SG', options).format(now);
   }
 }
 

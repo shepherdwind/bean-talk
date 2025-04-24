@@ -13,22 +13,47 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push:
+  check-changes:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
+    outputs:
+      should_build_base: ${{ steps.check-beancount-version.outputs.should_build }}
+      should_build_app: ${{ steps.check-app-version.outputs.should_build }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get package version
-        id: package-version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+      - name: Get beancount version
+        id: beancount-version
+        run: |
+          BEANCOUNT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/workflows/beancount-version.yml)
+          echo "version=$BEANCOUNT_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Check version change
-        id: check-version
+      - name: Check beancount version change
+        id: check-beancount-version
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/workflows/beancount-version.yml)
+
+          # Try to get previous version, default to "none" if not available
+          git fetch origin main || true
+          OLD_VERSION="none"
+          if git rev-parse HEAD^ >/dev/null 2>&1; then
+            git checkout HEAD^ .github/workflows/beancount-version.yml || true
+            OLD_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/workflows/beancount-version.yml || echo "none")
+            git checkout HEAD .github/workflows/beancount-version.yml
+          fi
+
+          # Compare versions
+          if [ "$OLD_VERSION" = "$CURRENT_VERSION" ]; then
+            echo "Beancount version unchanged, skipping base build"
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "Beancount version changed from $OLD_VERSION to $CURRENT_VERSION, proceeding with base build"
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check app version change
+        id: check-app-version
         run: |
           # Get current version
           CURRENT_VERSION=$(node -p "require('./package.json').version")
@@ -44,19 +69,74 @@ jobs:
 
           # Compare versions
           if [ "$OLD_VERSION" = "$CURRENT_VERSION" ]; then
-            echo "Version unchanged, skipping build"
+            echo "App version unchanged, skipping app build"
             echo "should_build=false" >> $GITHUB_OUTPUT
           else
-            echo "Version changed from $OLD_VERSION to $CURRENT_VERSION, proceeding with build"
+            echo "App version changed from $OLD_VERSION to $CURRENT_VERSION, proceeding with app build"
             echo "should_build=true" >> $GITHUB_OUTPUT
           fi
 
+  build-base:
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build_base == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get beancount version
+        id: beancount-version
+        run: |
+          BEANCOUNT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/workflows/beancount-version.yml)
+          echo "version=$BEANCOUNT_VERSION" >> $GITHUB_OUTPUT
+
       - name: Set up Docker Buildx
-        if: steps.check-version.outputs.should_build == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to the Container registry
-        if: steps.check-version.outputs.should_build == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push base image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: beancount-base
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:${{ steps.beancount-version.outputs.version }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:latest
+          cache-to: type=inline
+
+  build-app:
+    needs: [check-changes, build-base]
+    if: needs.check-changes.outputs.should_build_app == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get package version
+        id: package-version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -64,7 +144,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
-        if: steps.check-version.outputs.should_build == 'true'
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -77,12 +156,15 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
-      - name: Build and push Docker image
-        if: steps.check-version.outputs.should_build == 'true'
+      - name: Build and push application image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }} 
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:latest
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-to: type=inline 

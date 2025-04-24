@@ -96,6 +96,16 @@ docker run -d \
   ghcr.io/shepherdwind/bean-talk:latest
 ```
 
+## Beancount Version Management
+
+The beancount version is managed in `.github/workflows/beancount-version.yml`. To update beancount:
+
+1. Edit `.github/workflows/beancount-version.yml` and update the version number
+2. Commit and push the changes
+3. GitHub Actions will automatically rebuild the base image with the new version
+
+The base image will only be rebuilt when the beancount version changes, which helps to speed up the build process.
+
 ## License
 
 MIT License
