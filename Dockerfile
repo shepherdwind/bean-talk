@@ -8,7 +8,7 @@ RUN apk add --no-cache python3 build-base libxml2-dev libxslt-dev git py3-pip py
 
 # Set up Python virtual environment and install beancount
 COPY .github/workflows/beancount-version.yml .
-RUN BEANCOUNT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' beancount-version.yml) && \
+RUN BEANCOUNT_VERSION=$(grep -o 'beancount_version: "[0-9.]*"' beancount-version.yml | cut -d'"' -f2) && \
     python3 -m venv /app/venv && \
     . /app/venv/bin/activate && \
     git clone https://github.com/beancount/beancount /tmp/beancount && \
