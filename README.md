@@ -98,9 +98,9 @@ docker run -d \
 
 ## Beancount Version Management
 
-The beancount version is managed in `.github/workflows/beancount-version.yml`. To update beancount:
+The beancount version is managed in `.github/config/beancount-version.yml`. To update beancount:
 
-1. Edit `.github/workflows/beancount-version.yml` and update the version number
+1. Edit `.github/config/beancount-version.yml` and update the version number
 2. Commit and push the changes
 3. GitHub Actions will automatically rebuild the base image with the new version
 

@@ -25,22 +25,22 @@ jobs:
       - name: Get beancount version
         id: beancount-version
         run: |
-          BEANCOUNT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/workflows/beancount-version.yml)
+          BEANCOUNT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/config/beancount-version.yml)
           echo "version=$BEANCOUNT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Check beancount version change
         id: check-beancount-version
         run: |
           # Get current version
-          CURRENT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/workflows/beancount-version.yml)
+          CURRENT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/config/beancount-version.yml)
 
           # Try to get previous version, default to "none" if not available
           git fetch origin main || true
           OLD_VERSION="none"
           if git rev-parse HEAD^ >/dev/null 2>&1; then
-            git checkout HEAD^ .github/workflows/beancount-version.yml || true
-            OLD_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/workflows/beancount-version.yml || echo "none")
-            git checkout HEAD .github/workflows/beancount-version.yml
+            git checkout HEAD^ .github/config/beancount-version.yml || true
+            OLD_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/config/beancount-version.yml || echo "none")
+            git checkout HEAD .github/config/beancount-version.yml
           fi
 
           # Compare versions
@@ -91,7 +91,7 @@ jobs:
       - name: Get beancount version
         id: beancount-version
         run: |
-          BEANCOUNT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/workflows/beancount-version.yml)
+          BEANCOUNT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/config/beancount-version.yml)
           echo "version=$BEANCOUNT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
