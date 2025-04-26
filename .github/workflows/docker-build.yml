@@ -102,20 +102,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup version file
-        run: |
-          # Create config directory if it doesn't exist
-          mkdir -p .github/config
-          
-          # If the file doesn't exist in new location, create it with default version
-          if [ ! -f .github/config/beancount-version.yml ]; then
-            if [ -f .github/workflows/beancount-version.yml ]; then
-              cp .github/workflows/beancount-version.yml .github/config/
-            else
-              echo 'beancount_version: "2.3.5"' > .github/config/beancount-version.yml
-            fi
-          fi
-
       - name: Get beancount version
         id: beancount-version
         run: |
@@ -143,7 +129,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:${{ steps.beancount-version.outputs.version }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:latest
-          cache-to: type=inline
+          cache-to: type=gha
 
   build-app:
     needs: [check-changes, build-base]
@@ -156,26 +142,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup version file
-        run: |
-          # Create config directory if it doesn't exist
-          mkdir -p .github/config
-          
-          # If the file doesn't exist in new location, create it with default version
-          if [ ! -f .github/config/beancount-version.yml ]; then
-            if [ -f .github/workflows/beancount-version.yml ]; then
-              cp .github/workflows/beancount-version.yml .github/config/
-            else
-              echo 'beancount_version: "2.3.5"' > .github/config/beancount-version.yml
-            fi
-          fi
-
-      - name: Get beancount version
-        id: beancount-version
-        run: |
-          BEANCOUNT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/config/beancount-version.yml)
-          echo "version=$BEANCOUNT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Get package version
         id: package-version
@@ -215,4 +181,5 @@ jobs:
           cache-from: |
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:latest
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          cache-to: type=inline 
+            type=gha
+          cache-to: type=gha 

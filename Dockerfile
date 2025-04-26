@@ -21,12 +21,9 @@ RUN BEANCOUNT_VERSION=$(grep -o 'beancount_version: "[0-9.]*"' beancount-version
 ENV PATH="/app/venv/bin:$PATH"
 
 # Build stage
-FROM node:20-alpine AS builder
+FROM beancount-base AS builder
 
 WORKDIR /app
-
-# Install Python3 and build dependencies
-RUN apk add --no-cache python3 build-base libxml2-dev libxslt-dev git py3-pip python3-dev curl
 
 # Copy package files
 COPY package*.json ./
