@@ -21,6 +21,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global init.defaultBranch main
+          git branch -m main || true
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -86,6 +93,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global init.defaultBranch main
+          git branch -m main || true
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -130,6 +144,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global init.defaultBranch main
+          git branch -m main || true
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
