@@ -25,20 +25,6 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Setup version file
-        run: |
-          # Create config directory if it doesn't exist
-          mkdir -p .github/config
-          
-          # If the file doesn't exist in new location, create it with default version
-          if [ ! -f .github/config/beancount-version.yml ]; then
-            if [ -f .github/workflows/beancount-version.yml ]; then
-              cp .github/workflows/beancount-version.yml .github/config/
-            else
-              echo 'beancount_version: "2.3.5"' > .github/config/beancount-version.yml
-            fi
-          fi
-
       - name: Get beancount version
         id: beancount-version
         run: |
@@ -55,7 +41,7 @@ jobs:
           # Get latest published version from GitHub Packages
           OLD_VERSION=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/users/shepherdwind/packages/container/bean-talk-base/versions" \
-            | jq -r '.[0].name' || echo "none")
+            | jq -r '.[0].metadata.container.tags[0]' || echo "none")
           echo "Published version: $OLD_VERSION"
 
           # Compare versions
@@ -77,7 +63,7 @@ jobs:
           # Get latest published version from GitHub Packages
           OLD_VERSION=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/users/shepherdwind/packages/container/bean-talk/versions" \
-            | jq -r '.[0].name' || echo "none")
+            | jq -r '.[0].metadata.container.tags[0]' || echo "none")
           echo "Published version: $OLD_VERSION"
 
           # Compare versions
@@ -103,20 +89,6 @@ jobs:
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Setup version file
-        run: |
-          # Create config directory if it doesn't exist
-          mkdir -p .github/config
-          
-          # If the file doesn't exist in new location, create it with default version
-          if [ ! -f .github/config/beancount-version.yml ]; then
-            if [ -f .github/workflows/beancount-version.yml ]; then
-              cp .github/workflows/beancount-version.yml .github/config/
-            else
-              echo 'beancount_version: "2.3.5"' > .github/config/beancount-version.yml
-            fi
-          fi
 
       - name: Get beancount version
         id: beancount-version
@@ -161,20 +133,6 @@ jobs:
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Setup version file
-        run: |
-          # Create config directory if it doesn't exist
-          mkdir -p .github/config
-          
-          # If the file doesn't exist in new location, create it with default version
-          if [ ! -f .github/config/beancount-version.yml ]; then
-            if [ -f .github/workflows/beancount-version.yml ]; then
-              cp .github/workflows/beancount-version.yml .github/config/
-            else
-              echo 'beancount_version: "2.3.5"' > .github/config/beancount-version.yml
-            fi
-          fi
 
       - name: Get beancount version
         id: beancount-version
