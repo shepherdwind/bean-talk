@@ -124,6 +124,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile.base
           target: beancount-base
           push: true
           platforms: linux/amd64,linux/arm64
@@ -154,12 +155,6 @@ jobs:
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Get beancount version
-        id: beancount-version
-        run: |
-          BEANCOUNT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/config/beancount-version.yml)
-          echo "version=$BEANCOUNT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Get package version
         id: package-version
