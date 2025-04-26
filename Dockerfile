@@ -53,13 +53,6 @@ RUN npm install --production
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
-
-# Copy requirements.txt
-COPY requirements.txt .
-
-# Install Python dependencies
-RUN . /app/venv/bin/activate && pip install -r /app/requirements.txt
-
 # Expose the port the app runs on
 EXPOSE 3000
 
