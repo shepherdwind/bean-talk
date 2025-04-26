@@ -53,6 +53,36 @@ export class GmailAdapter {
     };
   }
 
+  private async scheduleTokenRefresh(expiryDate: number): Promise<void> {
+    const refreshTime = expiryDate - Date.now() - 5 * 60 * 1000;
+    if (refreshTime > 0) {
+      logger.info(`Scheduling token refresh in ${refreshTime}ms`);
+      setTimeout(() => {
+        logger.info('Refreshing access token...');
+        this.auth.refreshAccessToken();
+      }, refreshTime);
+    }
+  }
+
+  private async checkAndRefreshToken(): Promise<void> {
+    const currentTime = Date.now();
+    const tokenExpiryTime = this.tokens.expiry_date;
+    const timeUntilExpiry = tokenExpiryTime - currentTime;
+    
+    if (timeUntilExpiry < 10 * 60 * 1000) { // If token expires in less than 10 minutes
+      logger.info('Token is about to expire, refreshing...');
+      try {
+        await this.auth.refreshAccessToken();
+      } catch (error) {
+        logger.error('Error refreshing token:', error);
+        throw error;
+      }
+    } else {
+      logger.info(`Token is valid for ${Math.floor(timeUntilExpiry / 60000)} minutes`);
+      await this.scheduleTokenRefresh(tokenExpiryTime);
+    }
+  }
+
   async init(): Promise<void> {
     logger.info('Initializing Gmail adapter...');
     logger.info('Setting credentials...');
@@ -72,23 +102,11 @@ export class GmailAdapter {
         this.tokens.expiry_date = tokens.expiry_date || 0;
       }
       await this.saveTokens(this.tokens);
+      await this.scheduleTokenRefresh(tokens.expiry_date || 0);
     });
 
-    // Set up automatic token refresh
-    this.auth.on('tokens', async (tokens) => {
-      if (tokens.access_token) {
-        // Schedule token refresh 5 minutes before expiry
-        const expiryDate = tokens.expiry_date || 0;
-        const refreshTime = expiryDate - Date.now() - 5 * 60 * 1000;
-        if (refreshTime > 0) {
-          logger.info(`Scheduling token refresh in ${refreshTime}ms`);
-          setTimeout(() => {
-            logger.info('Refreshing access token...');
-            this.auth.refreshAccessToken();
-          }, refreshTime);
-        }
-      }
-    });
+    // Check token status on initialization
+    await this.checkAndRefreshToken();
 
     // Verify the auth is working
     try {

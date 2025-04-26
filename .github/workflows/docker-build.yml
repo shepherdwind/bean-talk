@@ -22,6 +22,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Ensure config directory exists
+        run: |
+          mkdir -p .github/config
+          if [ ! -f .github/config/beancount-version.yml ]; then
+            cp .github/workflows/beancount-version.yml .github/config/ || true
+          fi
+
       - name: Get beancount version
         id: beancount-version
         run: |
@@ -88,6 +95,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Ensure config directory exists
+        run: |
+          mkdir -p .github/config
+          if [ ! -f .github/config/beancount-version.yml ]; then
+            cp .github/workflows/beancount-version.yml .github/config/ || true
+          fi
+
       - name: Get beancount version
         id: beancount-version
         run: |
@@ -128,6 +142,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Ensure config directory exists
+        run: |
+          mkdir -p .github/config
+          if [ ! -f .github/config/beancount-version.yml ]; then
+            cp .github/workflows/beancount-version.yml .github/config/ || true
+          fi
 
       - name: Get package version
         id: package-version
