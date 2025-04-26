@@ -48,13 +48,11 @@ jobs:
           # Get current version
           CURRENT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/config/beancount-version.yml)
 
-          # Try to get previous version, default to "none" if not available
+          # Try to get previous version from main branch
           git fetch origin main || true
           OLD_VERSION="none"
-          if git rev-parse HEAD^ >/dev/null 2>&1; then
-            git checkout HEAD^ .github/config/beancount-version.yml || true
-            OLD_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/config/beancount-version.yml || echo "none")
-            git checkout HEAD .github/config/beancount-version.yml
+          if git show origin/main:.github/config/beancount-version.yml > /dev/null 2>&1; then
+            OLD_VERSION=$(git show origin/main:.github/config/beancount-version.yml | grep -oP 'beancount_version: "\K[0-9.]+' || echo "none")
           fi
 
           # Compare versions
@@ -72,13 +70,11 @@ jobs:
           # Get current version
           CURRENT_VERSION=$(node -p "require('./package.json').version")
 
-          # Try to get previous version, default to "none" if not available
+          # Try to get previous version from main branch
           git fetch origin main || true
           OLD_VERSION="none"
-          if git rev-parse HEAD^ >/dev/null 2>&1; then
-            git checkout HEAD^ package.json || true
-            OLD_VERSION=$(node -p "require('./package.json').version" || echo "none")
-            git checkout HEAD package.json
+          if git show origin/main:package.json > /dev/null 2>&1; then
+            OLD_VERSION=$(git show origin/main:package.json | node -p "require('./package.json').version" || echo "none")
           fi
 
           # Compare versions
