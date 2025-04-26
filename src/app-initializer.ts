@@ -75,9 +75,10 @@ export async function setupGmailAdapter(): Promise<GmailAdapter> {
   const credentials = await GmailAdapter.loadCredentials(process.env.GMAIL_CREDENTIALS_PATH || '');
 
   let tokens: GmailTokens;
+  const tokenPath = process.env.GMAIL_TOKENS_PATH || './data/token.json';
   try {
     tokens = JSON.parse(
-      await fs.readFile(process.env.GMAIL_TOKENS_PATH || '', 'utf-8')
+      await fs.readFile(tokenPath, 'utf-8')
     );
   } catch (error) {
     logger.info('No token.json found. Initializing Gmail authentication...');
@@ -94,6 +95,8 @@ export async function setupGmailAdapter(): Promise<GmailAdapter> {
     logger.info(authUrl);
     
     tokens = await gmailAdapter.getInitialTokens();
+    // Save tokens to persistent storage
+    await fs.writeFile(tokenPath, JSON.stringify(tokens, null, 2));
     logger.info('Gmail authentication successful!');
   }
   
