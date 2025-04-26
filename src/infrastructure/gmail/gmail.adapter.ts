@@ -235,8 +235,9 @@ export class GmailAdapter {
 
   private async saveTokens(tokens: GmailTokens): Promise<void> {
     try {
-      logger.info('Saving tokens to token.json...');
-      await fs.writeFile('token.json', JSON.stringify(tokens, null, 2));
+      const tokenPath = process.env.GMAIL_TOKENS_PATH || './data/token.json';
+      logger.info(`Saving tokens to ${tokenPath}...`);
+      await fs.writeFile(tokenPath, JSON.stringify(tokens, null, 2));
       logger.info('Tokens saved successfully');
     } catch (error) {
       logger.error('Error saving tokens:', error);
