@@ -87,12 +87,12 @@ jobs:
           echo "Debug: should_build_base value: ${{ steps.check-beancount-version.outputs.should_build_base }}"
           echo "Debug: should_build_app value: ${{ steps.check-app-version.outputs.should_build_app }}"
           echo "Debug: Job outputs:"
-          echo "should_build_base: ${{ needs.check-changes.outputs.should_build_base }}"
-          echo "should_build_app: ${{ needs.check-changes.outputs.should_build_app }}"
+          echo "should_build_base: ${{ steps.check-beancount-version.outputs.should_build_base }}"
+          echo "should_build_app: ${{ steps.check-app-version.outputs.should_build_app }}"
 
   build-base:
     needs: check-changes
-    if: needs.check-changes.outputs.should_build_base == 'true'
+    if: ${{ needs.check-changes.outputs.should_build_base == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -144,7 +144,7 @@ jobs:
 
   build-app:
     needs: [check-changes, build-base]
-    if: needs.check-changes.outputs.should_build_app == 'true'
+    if: ${{ needs.check-changes.outputs.should_build_app == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -205,7 +205,8 @@ jobs:
             type=gha
           cache-to: type=gha
 
-      - name: Debug build-app condition
+      - name: Debug build condition
         run: |
-          echo "Debug: should_build_app value in build-app job: ${{ needs.check-changes.outputs.should_build_app }}"
-          echo "Debug: build-base job status: ${{ needs.build-base.result }}" 
+          echo "Debug: should_build_app value: ${{ needs.check-changes.outputs.should_build_app }}"
+          echo "Debug: build-base status: ${{ needs.build-base.result }}"
+          echo "Debug: should_build_base value: ${{ needs.check-changes.outputs.should_build_base }}" 
