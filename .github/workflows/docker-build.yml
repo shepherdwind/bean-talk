@@ -143,8 +143,7 @@ jobs:
           cache-to: type=gha
 
   build-app:
-    needs: ${{ needs.check-changes.outputs.should_build_base == 'true' && 'check-changes,build-base' || 'check-changes' }}
-    if: ${{ needs.check-changes.outputs.should_build_app == 'true' }}
+    needs: [check-changes]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -208,4 +207,5 @@ jobs:
       - name: Debug build condition
         run: |
           echo "Debug: should_build_app value: ${{ needs.check-changes.outputs.should_build_app }}"
-          echo "Debug: should_build_base value: ${{ needs.check-changes.outputs.should_build_base }}" 
+          echo "Debug: should_build_base value: ${{ needs.check-changes.outputs.should_build_base }}"
+          echo "Debug: build-base result: ${{ needs.build-base.result }}" 
