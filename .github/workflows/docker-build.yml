@@ -82,6 +82,14 @@ jobs:
             echo "should_build=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Debug outputs
+        run: |
+          echo "Debug: should_build_base value: ${{ steps.check-beancount-version.outputs.should_build }}"
+          echo "Debug: should_build_app value: ${{ steps.check-app-version.outputs.should_build }}"
+          echo "Debug: Job outputs:"
+          echo "should_build_base: ${{ needs.check-changes.outputs.should_build_base }}"
+          echo "should_build_app: ${{ needs.check-changes.outputs.should_build_app }}"
+
   build-base:
     needs: check-changes
     if: needs.check-changes.outputs.should_build_base == 'true'
@@ -195,4 +203,9 @@ jobs:
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:latest
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             type=gha
-          cache-to: type=gha 
+          cache-to: type=gha
+
+      - name: Debug build-app condition
+        run: |
+          echo "Debug: should_build_app value in build-app job: ${{ needs.check-changes.outputs.should_build_app }}"
+          echo "Debug: build-base job status: ${{ needs.build-base.result }}" 
