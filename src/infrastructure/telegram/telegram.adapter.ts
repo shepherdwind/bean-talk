@@ -86,16 +86,31 @@ export class TelegramAdapter {
       return;
     }
 
-    try {
-      await this.commandHandlers.sendNotification(
-        this.chatId,
-        message,
-        merchantId,
-        categorizationData
-      );
-    } catch (error) {
-      this.logger.error(`Failed to send notification to chat ${this.chatId}:`, error);
-      throw error;
+    const maxRetries = 3;
+    let retryCount = 0;
+
+    this.logger.debug(`Sending notification to chat ${this.chatId}, message: ${message}`);
+
+    while (retryCount < maxRetries) {
+      try {
+        await this.commandHandlers.sendNotification(
+          this.chatId,
+          message,
+          merchantId,
+          categorizationData
+        );
+        return; // Success, exit the function
+      } catch (error) {
+        retryCount++;
+        this.logger.error(`Failed to send notification to chat ${this.chatId} (attempt ${retryCount}/${maxRetries}):`, error);
+        
+        if (retryCount === maxRetries) {
+          this.logger.error('Maximum retry attempts reached, giving up');
+        }
+
+        // Wait for 10 seconds before retrying
+        await new Promise(resolve => setTimeout(resolve, 10000));
+      }
     }
   }
 } 
