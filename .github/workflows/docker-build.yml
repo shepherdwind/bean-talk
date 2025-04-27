@@ -16,8 +16,8 @@ jobs:
   check-changes:
     runs-on: ubuntu-latest
     outputs:
-      should_build_base: ${{ steps.check-beancount-version.outputs.should_build }}
-      should_build_app: ${{ steps.check-app-version.outputs.should_build }}
+      should_build_base: ${{ steps.check-beancount-version.outputs.should_build_base }}
+      should_build_app: ${{ steps.check-app-version.outputs.should_build_app }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -54,10 +54,10 @@ jobs:
           # Compare versions
           if [ "$OLD_VERSION" = "$CURRENT_VERSION" ]; then
             echo "Beancount version unchanged, skipping base build"
-            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "should_build_base=false" >> $GITHUB_OUTPUT
           else
             echo "Beancount version changed from $OLD_VERSION to $CURRENT_VERSION, proceeding with base build"
-            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "should_build_base=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Check app version change
@@ -76,16 +76,16 @@ jobs:
           # Compare versions
           if [ "$OLD_VERSION" = "$CURRENT_VERSION" ]; then
             echo "App version unchanged, skipping app build"
-            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "should_build_app=false" >> $GITHUB_OUTPUT
           else
             echo "App version changed from $OLD_VERSION to $CURRENT_VERSION, proceeding with app build"
-            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "should_build_app=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Debug outputs
         run: |
-          echo "Debug: should_build_base value: ${{ steps.check-beancount-version.outputs.should_build }}"
-          echo "Debug: should_build_app value: ${{ steps.check-app-version.outputs.should_build }}"
+          echo "Debug: should_build_base value: ${{ steps.check-beancount-version.outputs.should_build_base }}"
+          echo "Debug: should_build_app value: ${{ steps.check-app-version.outputs.should_build_app }}"
           echo "Debug: Job outputs:"
           echo "should_build_base: ${{ needs.check-changes.outputs.should_build_base }}"
           echo "should_build_app: ${{ needs.check-changes.outputs.should_build_app }}"
