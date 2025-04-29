@@ -4,11 +4,17 @@ import { AccountName } from "../../domain/models/account";
 import { Amount, Currency } from "../../domain/models/types";
 import { EmailParser } from "./email-parser.interface";
 import { logger } from "../utils/logger";
-import { ApplicationEventEmitter, MerchantCategorizationEvent } from "../events/event-emitter";
+import {
+  ApplicationEventEmitter,
+  MerchantCategorizationEvent,
+} from "../events/event-emitter";
 import { container } from "../utils";
 import { AccountingService } from "../../domain/services/accounting.service";
-import { extractTransactionData, TransactionData } from "./dbs-transaction-extractor";
-import { EventTypes } from '../events/event-types';
+import {
+  extractTransactionData,
+  TransactionData,
+} from "./dbs-transaction-extractor";
+import { EventTypes } from "../events/event-types";
 import { getCardAccount } from "../utils/telegram";
 /**
  * Interface for transaction creation parameters
@@ -41,7 +47,10 @@ export class DBSEmailParser implements EmailParser {
    */
   canParse(email: Email): boolean {
     const subject = email.subject;
-    const isSubjectMatch = /Transaction Alert/i.test(subject) || /iBanking Alert/i.test(subject);
+    const isSubjectMatch =
+      /Transaction Alert/i.test(subject) ||
+      /iBanking Alert/i.test(subject) ||
+      /digibank Alert/i.test(subject);
     const isFromMatch = /@dbs\.com/i.test(email.from);
     return isSubjectMatch && isFromMatch;
   }
@@ -70,8 +79,14 @@ export class DBSEmailParser implements EmailParser {
 
       // Create transaction entries
       return this.createTransaction({
-        date, merchant, amount, currency, cardInfo, category, emailId: email.id,
-        account: getCardAccount(email.to)
+        date,
+        merchant,
+        amount,
+        currency,
+        cardInfo,
+        category,
+        emailId: email.id,
+        account: getCardAccount(email.to),
       });
     } catch (error) {
       logger.error("Error parsing DBS email:", error);
@@ -82,7 +97,10 @@ export class DBSEmailParser implements EmailParser {
   /**
    * Gets category for merchant or handles new merchant categorization
    */
-  private getMerchantCategory(merchant: string, email: Email): AccountName | null {
+  private getMerchantCategory(
+    merchant: string,
+    email: Email
+  ): AccountName | null {
     const category = this.accountingService.findCategoryForMerchant(merchant);
 
     if (!category) {
@@ -91,7 +109,7 @@ export class DBSEmailParser implements EmailParser {
       logger.info(
         `Merchant "${merchant}" not found in category mapping. Added to config for manual categorization.`
       );
-      
+
       this.emitMerchantCategorizationEvent(merchant, email);
       return null;
     }
@@ -102,10 +120,15 @@ export class DBSEmailParser implements EmailParser {
   /**
    * Emits an event for merchant categorization
    */
-  private emitMerchantCategorizationEvent(merchant: string, email: Email): void {
+  private emitMerchantCategorizationEvent(
+    merchant: string,
+    email: Email
+  ): void {
     const timestamp = new Date().toISOString();
-    const merchantId = `${merchant.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}`;
-    
+    const merchantId = `${merchant
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "_")}_${Date.now()}`;
+
     const event: MerchantCategorizationEvent = {
       merchant,
       merchantId,
@@ -113,11 +136,15 @@ export class DBSEmailParser implements EmailParser {
       email,
       amount: {
         value: extractTransactionData(email)?.amount || 0,
-        currency: extractTransactionData(email)?.currency || 'SGD'
-      }
+        currency: extractTransactionData(email)?.currency || "SGD",
+      },
     };
 
-    logger.info("Emitting merchant categorization event:", event.merchant, event.amount);
+    logger.info(
+      "Emitting merchant categorization event:",
+      event.merchant,
+      event.amount
+    );
     // Emit an event for the new merchant that needs categorization
     this.eventEmitter.emit(EventTypes.MERCHANT_NEEDS_CATEGORIZATION, event);
   }
@@ -126,8 +153,9 @@ export class DBSEmailParser implements EmailParser {
    * Creates a transaction object from parsed data
    */
   private createTransaction(params: TransactionCreationParams): Transaction {
-    const { date, merchant, amount, currency, cardInfo, category, emailId } = params;
-    
+    const { date, merchant, amount, currency, cardInfo, category, emailId } =
+      params;
+
     const amountObj: Amount = {
       value: amount,
       currency,
