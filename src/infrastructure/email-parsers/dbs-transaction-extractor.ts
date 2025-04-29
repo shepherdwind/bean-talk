@@ -60,6 +60,17 @@ function extractAmount(body: string): { amount: number; currency: Currency } | n
   // Extract the amount string between "Amount:" and "From:"
   const amountStr = body.substring(amountStart + 'Amount:'.length, fromStart).trim();
   
+  // Handle S$ format
+  if (amountStr.startsWith('S$')) {
+    const cleanAmountStr = amountStr.substring(2).replace(/[^\d.]/g, '');
+    const amount = parseAmount(cleanAmountStr);
+    if (amount === null) {
+      logger.warn("Failed to parse amount:", cleanAmountStr);
+      return null;
+    }
+    return { amount, currency: 'SGD' as Currency };
+  }
+  
   // Extract currency (first 3 characters after removing whitespace)
   const currency = amountStr.trim().substring(0, 3).toUpperCase() as Currency;
   
@@ -112,7 +123,7 @@ function parseAmount(amountStr: string): number | null {
 function extractDate(body: string): Date | null {
   const dateStr = extractValue(
     body,
-    /Date & Time:\s*(\d{2}\s+[A-Za-z]{3}\s*\d{2}:\d{2})\s*\(SGT\)/i
+    /Date & Time:\s*(\d{2}\s+[A-Za-z]{3}\s*\d{2}:\d{2})\s*(?:\(SGT\)|SGT)/i
   );
   logger.debug("Date string extracted:", dateStr);
 

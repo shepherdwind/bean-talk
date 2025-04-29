@@ -219,6 +219,63 @@ Please do not reply to this email as it is auto generated`;
       }
     });
 
+    it('should correctly parse a DBS transaction alert email with S$ currency format', () => {
+      const emailBody = `Card Transaction Alert
+Transaction Ref: 510805332088
+Dear Sir / Madam,
+We refer to your card transaction request dated 29/04/25.
+We are pleased to confirm that the transaction was completed.
+
+Date & Time: 29 Apr 13:43 SGT Amount: S$4.00 From: DBS/POSB Account ending 2764 To: HAINAN CHICKEN RICE
+
+Please do not reply to this email as it is auto generated`;
+
+      const email: Email = {
+        id: 'test-id',
+        subject: 'Card Transaction Alert',
+        from: 'ibanking.alert@dbs.com',
+        to: 'test@iling.fun',
+        body: emailBody
+      };
+
+      const result = parser.parse(email);
+
+      expect(result).not.toBeNull();
+      if (result) {
+        const expectedDate = new Date();
+        expectedDate.setMonth(3); // April
+        expectedDate.setDate(29);
+        expectedDate.setHours(13);
+        expectedDate.setMinutes(43);
+        expectedDate.setSeconds(0);
+        expectedDate.setMilliseconds(0);
+
+        expect(result.date.getTime()).toBe(expectedDate.getTime());
+        expect(result.description).toBe('HAINAN CHICKEN RICE');
+        expect(result.entries).toHaveLength(2);
+        
+        // Check first entry (DBS account)
+        expect(result.entries[0].account).toBe(AccountName.AssetsDBSSGDSaving);
+        expect(result.entries[0].amount).toEqual({
+          value: -4.00,
+          currency: Currency.SGD
+        });
+        expect(result.entries[0].metadata).toEqual({
+          merchant: 'HAINAN CHICKEN RICE',
+          cardInfo: 'DBS/POSB Account ending 2764'
+        });
+
+        // Check second entry (Expense)
+        expect(result.entries[1].account).toBe(AccountName.ExpensesShoppingOnline);
+        expect(result.entries[1].amount).toEqual({
+          value: 4.00,
+          currency: Currency.SGD
+        });
+
+        expect(result.metadata).toHaveProperty('emailId', 'test-id');
+      }
+    });
+
     it('should return null for invalid email format', () => {
       const email: Email = {
         id: 'test-id',
