@@ -81,6 +81,14 @@ export class EventListenerService {
       getQueueEventName(EventTypes.MERCHANT_NEEDS_CATEGORIZATION),
       async (data: MerchantCategorizationEvent) => {
         try {
+          // Check if merchant already has a category
+          const existingCategory = this.accountingService.findCategoryForMerchant(data.merchant);
+          if (existingCategory) {
+            logger.info(`Merchant ${data.merchant} already has category: ${existingCategory}`);
+            this.messageQueue.completeTask(data.merchantId);
+            return;
+          }
+
           let message =
             `New Merchant Needs Categorization\n@${getAccountByEmail(data.email?.to)}\n\n` +
             `Merchant: <b>${data.merchant}</b>\n` +
