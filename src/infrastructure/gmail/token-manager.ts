@@ -37,23 +37,31 @@ export class TokenManager {
 
   static async loadCredentials(): Promise<GmailCredentials> {
     const rawCredentials = JSON.parse(await fs.readFile(TokenManager.CREDENTIALS_PATH, 'utf-8'));
-    const defaultRedirectUri = rawCredentials.installed.redirect_uris[0];
+    const credentials = rawCredentials.web || rawCredentials.installed;
+    if (!credentials) {
+      throw new Error('Invalid credentials format: missing both "web" and "installed" configurations');
+    }
+    
+    const defaultRedirectUri = credentials.redirect_uris[0];
     
     // 如果是本地开发环境，确保带上端口
     if (defaultRedirectUri.includes('localhost')) {
       const redirectUri = new URL(defaultRedirectUri);
       redirectUri.port = process.env.PORT || '3000';
       return {
-        client_id: rawCredentials.installed.client_id,
-        client_secret: rawCredentials.installed.client_secret,
+        client_id: credentials.client_id,
+        client_secret: credentials.client_secret,
         redirect_uri: redirectUri.toString()
       };
     }
     
+    // 生产环境使用 GMAIL_REDIRECT_URI 或默认的 redirect_uri
+    const redirectUri = process.env.GMAIL_REDIRECT_URI || defaultRedirectUri;
+    logger.info(`Using redirect URI: ${redirectUri}`);
     return {
-      client_id: rawCredentials.installed.client_id,
-      client_secret: rawCredentials.installed.client_secret,
-      redirect_uri: process.env.GMAIL_REDIRECT_URI || defaultRedirectUri
+      client_id: credentials.client_id,
+      client_secret: credentials.client_secret,
+      redirect_uri: redirectUri
     };
   }
 
