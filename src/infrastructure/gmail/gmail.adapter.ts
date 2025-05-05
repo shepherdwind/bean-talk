@@ -1,118 +1,29 @@
 import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
-import { promises as fs } from 'fs';
-import { createServer } from 'http';
-import { URL } from 'url';
-import { extractEmailHeaders, extractEmailBody } from './email.utils';
 import { logger } from '../utils/logger';
+import { GmailTokens, Email } from './types';
+import { TokenManager } from './token-manager';
+import { EmailProcessor } from './email-processor';
 
-export interface GmailCredentials {
-  client_id: string;
-  client_secret: string;
-  redirect_uri: string;
-}
-
-export interface GmailTokens {
-  access_token: string;
-  refresh_token: string;
-  scope: string;
-  token_type: string;
-  expiry_date: number;
-}
-
-export interface Email {
-  id: string;
-  to: string;
-  subject: string;
-  from: string;
-  date?: string;
-  body: string;
-}
-
+export { Email } from './types';
 export class GmailAdapter {
-  private auth: OAuth2Client;
-  private gmail = google.gmail('v1');
+  private tokenManager: TokenManager;
+  private emailProcessor: EmailProcessor;
 
-  constructor(
-    private credentials: GmailCredentials,
-    private tokens: GmailTokens
-  ) {
-    this.auth = new google.auth.OAuth2(
-      credentials.client_id,
-      credentials.client_secret,
-      credentials.redirect_uri
-    );
+  constructor(tokenManager: TokenManager) {
+    this.tokenManager = tokenManager;
+    this.emailProcessor = new EmailProcessor(this.tokenManager.getAuth());
   }
 
-  static async loadCredentials(path: string): Promise<GmailCredentials> {
-    const rawCredentials = JSON.parse(await fs.readFile(path, 'utf-8'));
-    return {
-      client_id: rawCredentials.installed.client_id,
-      client_secret: rawCredentials.installed.client_secret,
-      redirect_uri: rawCredentials.installed.redirect_uris[0]
-    };
-  }
-
-  private async scheduleTokenRefresh(expiryDate: number): Promise<void> {
-    const refreshTime = expiryDate - Date.now() - 5 * 60 * 1000;
-    if (refreshTime > 0) {
-      logger.info(`Scheduling token refresh in ${refreshTime}ms`);
-      setTimeout(() => {
-        logger.info('Refreshing access token...');
-        this.auth.refreshAccessToken();
-      }, refreshTime);
-    }
-  }
-
-  private async checkAndRefreshToken(): Promise<void> {
-    const currentTime = Date.now();
-    const tokenExpiryTime = this.tokens.expiry_date;
-    const timeUntilExpiry = tokenExpiryTime - currentTime;
-    
-    if (timeUntilExpiry < 10 * 60 * 1000) { // If token expires in less than 10 minutes
-      logger.info('Token is about to expire, refreshing...');
-      try {
-        await this.auth.refreshAccessToken();
-      } catch (error) {
-        logger.error('Error refreshing token:', error);
-        throw error;
-      }
-    } else {
-      logger.info(`Token is valid for ${Math.floor(timeUntilExpiry / 60000)} minutes`);
-      await this.scheduleTokenRefresh(tokenExpiryTime);
-    }
-  }
-
-  async init(): Promise<void> {
+  static async initialize(): Promise<GmailAdapter> {
     logger.info('Initializing Gmail adapter...');
-    logger.info('Setting credentials...');
-    this.auth.setCredentials(this.tokens);
-    logger.info('Credentials set successfully');
+    const tokenManager = await TokenManager.initialize();
     
-    // Handle token refresh
-    this.auth.on('tokens', async (tokens) => {
-      logger.info('Token refresh event received');
-      if (tokens.refresh_token) {
-        logger.info('Received new refresh token, saving...');
-        this.tokens.refresh_token = tokens.refresh_token;
-      }
-      if (tokens.access_token) {
-        logger.info('Received new access token, updating...');
-        this.tokens.access_token = tokens.access_token;
-        this.tokens.expiry_date = tokens.expiry_date || 0;
-      }
-      await this.saveTokens(this.tokens);
-      await this.scheduleTokenRefresh(tokens.expiry_date || 0);
-    });
-
-    // Check token status on initialization
-    await this.checkAndRefreshToken();
-
     // Verify the auth is working
     try {
       logger.info('Verifying Gmail API connection...');
-      const response = await this.gmail.users.getProfile({
-        auth: this.auth,
+      const gmail = google.gmail('v1');
+      const response = await gmail.users.getProfile({
+        auth: tokenManager.getAuth(),
         userId: 'me'
       });
       logger.info('Gmail API connection verified successfully');
@@ -121,145 +32,23 @@ export class GmailAdapter {
       logger.error('Error verifying Gmail API connection:', error);
       throw error;
     }
+
+    return new GmailAdapter(tokenManager);
   }
 
-  /**
-   * Generate OAuth URL for authorization
-   */
   generateAuthUrl(): string {
-    logger.info('Generating OAuth URL for authorization...');
-    const url = this.auth.generateAuthUrl({
-      access_type: 'offline',
-      scope: [
-        'https://www.googleapis.com/auth/gmail.readonly',
-        'https://www.googleapis.com/auth/gmail.modify'
-      ],
-      prompt: 'consent'
-    });
-    logger.info('Please visit this URL to authorize the application:');
-    logger.debug(url);
-    return url;
+    return this.tokenManager.generateAuthUrl();
   }
 
-  /**
-   * Get initial tokens through OAuth flow
-   */
   async getInitialTokens(): Promise<GmailTokens> {
-    logger.info('Starting OAuth flow to get initial tokens...');
-    return new Promise((resolve, reject) => {
-      const server = createServer(async (req, res) => {
-        try {
-          const url = new URL(req.url!, `http://${req.headers.host}`);
-          const code = url.searchParams.get('code');
-
-          if (!code) {
-            res.writeHead(400);
-            res.end('Authorization code not found');
-            server.close();
-            reject(new Error('Authorization code not found'));
-            return;
-          }
-
-          logger.info('Received authorization code, exchanging for tokens...');
-          const { tokens } = await this.auth.getToken(code);
-          this.tokens = tokens as GmailTokens;
-          await this.saveTokens(this.tokens);
-          logger.info('Successfully obtained and saved tokens');
-
-          res.writeHead(200);
-          res.end('Authorization successful! You can close this window.');
-          server.close();
-          resolve(this.tokens);
-        } catch (error) {
-          logger.error('Error during authorization:', error);
-          res.writeHead(500);
-          res.end('Error during authorization');
-          server.close();
-          reject(error);
-        }
-      });
-
-      const redirectUri = new URL(this.credentials.redirect_uri);
-      server.listen(redirectUri.port || 80, () => {
-        logger.info(`OAuth server listening on port ${redirectUri.port || 80}`);
-      });
-    });
+    return this.tokenManager.getInitialTokens();
   }
 
   async fetchUnreadEmails(query: string): Promise<Email[]> {
-    try {
-      // Search for unread emails matching the query
-      const response = await this.gmail.users.messages.list({
-        auth: this.auth,
-        userId: 'me',
-        q: `is:unread ${query}`,
-        // q: `${query}`,
-      });
-
-      const messages = response.data.messages || [];
-      const emails: Email[] = [];
-
-      for (const message of messages) {
-        const email = await this.getEmailDetails(message.id!);
-        if (email) {
-          emails.push(email);
-        }
-      }
-
-      return emails;
-    } catch (error) {
-      logger.error('Error fetching emails:', error);
-      throw error;
-    }
+    return this.emailProcessor.fetchUnreadEmails(query);
   }
 
   async markAsRead(emailId: string): Promise<void> {
-    try {
-      await this.gmail.users.messages.modify({
-        auth: this.auth,
-        userId: 'me',
-        id: emailId,
-        requestBody: {
-          removeLabelIds: ['UNREAD'],
-        },
-      });
-    } catch (error) {
-      logger.error('Error marking email as read:', error);
-      throw error;
-    }
-  }
-
-  private async getEmailDetails(messageId: string): Promise<Email | null> {
-    try {
-      const response = await this.gmail.users.messages.get({
-        auth: this.auth,
-        userId: 'me',
-        id: messageId,
-      });
-
-      const headers = extractEmailHeaders(response.data.payload?.headers || []);
-      const body = extractEmailBody(response.data.payload || {});
-
-      return {
-        id: messageId,
-        ...headers,
-        body,
-      };
-    } catch (error) {
-      logger.error('Error getting email details:', error);
-      return null;
-    }
-  }
-
-  private async saveTokens(tokens: GmailTokens): Promise<void> {
-    try {
-      const tokenPath = process.env.GMAIL_TOKENS_PATH || './data/token.json';
-      logger.info(`Saving tokens to ${tokenPath}...`);
-      await fs.writeFile(tokenPath, JSON.stringify(tokens, null, 2));
-      logger.info('Tokens saved successfully');
-    } catch (error) {
-      logger.error('Error saving tokens:', error);
-      throw error;
-    }
+    return this.emailProcessor.markAsRead(emailId);
   }
 }

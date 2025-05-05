@@ -1,6 +1,5 @@
-import { promises as fs } from 'fs';
 import cron from 'node-cron';
-import { GmailAdapter, GmailTokens } from './infrastructure/gmail/gmail.adapter';
+import { GmailAdapter } from './infrastructure/gmail/gmail.adapter';
 import { OpenAIAdapter } from './infrastructure/openai/openai.adapter';
 import { NLPService } from './domain/services/nlp.service';
 import { BeancountService } from './domain/services/beancount.service';
@@ -70,41 +69,8 @@ export async function initializeContainer(): Promise<void> {
  */
 export async function setupGmailAdapter(): Promise<GmailAdapter> {
   logger.info('Setting up Gmail adapter...');
-  
-  // Load Gmail credentials and tokens
-  const credentials = await GmailAdapter.loadCredentials(process.env.GMAIL_CREDENTIALS_PATH || '');
-
-  let tokens: GmailTokens;
-  const tokenPath = process.env.GMAIL_TOKENS_PATH || './data/token.json';
-  try {
-    tokens = JSON.parse(
-      await fs.readFile(tokenPath, 'utf-8')
-    );
-  } catch (error) {
-    logger.info('No token.json found. Initializing Gmail authentication...');
-    const gmailAdapter = new GmailAdapter(credentials, {
-      access_token: '',
-      refresh_token: '',
-      scope: '',
-      token_type: '',
-      expiry_date: 0
-    });
-    
-    const authUrl = gmailAdapter.generateAuthUrl();
-    logger.info('Please visit this URL to authorize the application:');
-    logger.info(authUrl);
-    
-    tokens = await gmailAdapter.getInitialTokens();
-    // Save tokens to persistent storage
-    await fs.writeFile(tokenPath, JSON.stringify(tokens, null, 2));
-    logger.info('Gmail authentication successful!');
-  }
-  
-  // Initialize Gmail adapter and register it
-  const gmailAdapter = new GmailAdapter(credentials, tokens);
-  await gmailAdapter.init();
+  const gmailAdapter = await GmailAdapter.initialize();
   container.registerClass(GmailAdapter, gmailAdapter);
-  
   logger.info('Gmail adapter setup completed');
   return gmailAdapter;
 }
