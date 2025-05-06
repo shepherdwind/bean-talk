@@ -1,4 +1,5 @@
 import { Email } from "../gmail/gmail.adapter";
+import { Message } from 'telegraf/typings/core/types/typegram';
 
 export interface PendingCategorization {
   merchantId: string;
@@ -7,3 +8,5 @@ export interface PendingCategorization {
   chatId?: string;
   email?: Email;
 } 
+
+export type TextMessage = Message.TextMessage; 

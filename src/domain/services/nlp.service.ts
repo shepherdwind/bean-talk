@@ -17,6 +17,11 @@ export interface ParsedExpenseData {
   category: string;
 }
 
+export interface DateRange {
+  startDate: Date;
+  endDate: Date;
+}
+
 export class NLPService {
   private openaiAdapter: OpenAIAdapter;
   private accountingService: AccountingService;
@@ -85,6 +90,37 @@ Please respond with ONLY a clean JSON object in this exact format, without any m
     } catch (error) {
       logger.error('Error parsing expense input:', error);
       throw error;
+    }
+  }
+
+  async parseDateRange(text: string): Promise<DateRange | null> {
+    try {
+      const currentDate = new Date();
+      const prompt = `You are a helpful assistant that parses natural language time ranges into specific dates.
+      The current date is ${currentDate.toISOString()}.
+      You must respond with ONLY a JSON object containing startDate and endDate in ISO format.
+      Do not include any other text, explanations, or markdown formatting.
+      For example, if the input is "last week", the response should be:
+      {"startDate":"2024-03-11T00:00:00.000Z","endDate":"2024-03-17T23:59:59.999Z"}
+      If you cannot parse the time range, return null.`;
+
+      const response = await this.openaiAdapter.processMessage(prompt, text);
+      if (!response) return null;
+
+      // Remove any non-JSON content
+      const jsonMatch = response.match(/\{.*\}/s);
+      if (!jsonMatch) return null;
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (!parsed.startDate || !parsed.endDate) return null;
+
+      return {
+        startDate: new Date(parsed.startDate),
+        endDate: new Date(parsed.endDate)
+      };
+    } catch (error) {
+      logger.error('Error parsing date range:', error);
+      return null;
     }
   }
 }

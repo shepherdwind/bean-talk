@@ -1,10 +1,11 @@
 import { Telegraf, Context } from "telegraf";
 import { ILogger, container, Logger } from "../utils";
 import { TG_ACCOUNTS } from "../utils/telegram";
-import { PendingCategorization } from "./types";
+import { PendingCategorization, TextMessage } from "./types";
 import { CategorizationCommandHandler } from "./commands/categorization-command-handler";
 import { QueryCommandHandler } from "./commands/query-command-handler";
 import { AddCommandHandler } from "./commands/add-command-handler";
+import { CustomQueryCommandHandler } from "./commands/custom-query-command-handler";
 
 // 用户状态枚举
 export enum UserState {
@@ -19,6 +20,7 @@ export class CommandHandlers {
   private categorizationHandler: CategorizationCommandHandler;
   private queryHandler: QueryCommandHandler;
   private addHandler: AddCommandHandler;
+  private customQueryHandler: CustomQueryCommandHandler;
 
   // 用户状态管理
   private userStates: Map<string, UserState> = new Map();
@@ -34,6 +36,7 @@ export class CommandHandlers {
 
     this.queryHandler = new QueryCommandHandler(bot);
     this.addHandler = new AddCommandHandler(bot, this);
+    this.customQueryHandler = new CustomQueryCommandHandler(bot);
 
     this.setupMessageHandler();
     this.setupCommandHandlers();
@@ -82,6 +85,11 @@ export class CommandHandlers {
 
           case UserState.IDLE:
           default:
+            const handledByCustomQuery = await this.customQueryHandler.handle(ctx);
+            if (handledByCustomQuery) {
+              break;
+            }
+
             // 用户处于空闲状态，尝试让 AddCommandHandler 处理
             // 如果 AddCommandHandler 没有处理，则尝试让 CategorizationCommandHandler 处理
             const handledByAdd = await this.addHandler.handleMessage(ctx);

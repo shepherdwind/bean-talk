@@ -8,5 +8,5 @@ export abstract class BaseCommandHandler {
     this.logger = container.getByClass(Logger);
   }
 
-  abstract handle(ctx: Context, ...args: any[]): Promise<void>;
+  abstract handle(ctx: Context, ...args: any[]): Promise<boolean | void>;
 } 
