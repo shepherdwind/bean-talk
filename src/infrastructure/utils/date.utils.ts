@@ -33,3 +33,14 @@ export function formatDateToYYYYMMDD(date: Date): string {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Format a date to MM-DD format
+ * @param date - The date to format
+ * @returns Formatted date string in MM-DD format
+ */
+export function formatDateToMMDD(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${month}-${day}`;
+}

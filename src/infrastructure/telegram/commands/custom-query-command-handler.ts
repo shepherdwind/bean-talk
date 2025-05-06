@@ -5,6 +5,7 @@ import { container } from '../../utils';
 import { formatQueryResult } from '../../utils/query-result-formatter';
 import { NLPService } from '../../../domain/services/nlp.service';
 import { TextMessage } from '../types';
+import { formatDateToMMDD } from '../../utils/date.utils';
 
 export class CustomQueryCommandHandler extends BaseCommandHandler {
   private bot: Telegraf;
@@ -50,7 +51,8 @@ export class CustomQueryCommandHandler extends BaseCommandHandler {
       }
 
       this.logger.info(`Parsed date range: ${dateRange.startDate} to ${dateRange.endDate}`);
-      await ctx.reply(`Querying transactions for ${queryText}...`);
+      
+      await ctx.reply(`Querying transactions from ${formatDateToMMDD(dateRange.startDate)} to ${formatDateToMMDD(dateRange.endDate)}...`);
       
       this.logger.debug('Querying beancount service');
       const result = await this.beancountService.queryByDateRange(dateRange.startDate, dateRange.endDate);
