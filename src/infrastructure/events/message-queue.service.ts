@@ -46,9 +46,20 @@ export class MessageQueueService {
 
   public completeTask(taskId: string): void {
     this.isProcessing = false;
-    // Remove the item from the queue
-    this.queue.shift();
-    logger.debug(`Task completed with ID: ${taskId}`);
+    
+    // Find the index of the task with matching taskId
+    const taskIndex = this.queue.findIndex(item => item.taskId === taskId);
+    
+    if (taskIndex === -1) {
+      logger.debug(`No task found with ID: ${taskId}`);
+      return;
+    }
+
+    // Remove the specific task from the queue
+    this.queue.splice(taskIndex, 1);
+    logger.debug(`Task completed with ID: ${taskId}`, {
+      remainingQueueLength: this.queue.length
+    });
 
     // Trigger queue processing if there are items in the queue
     if (this.queue.length > 0 && !this.isProcessing) {
@@ -107,5 +118,18 @@ export class MessageQueueService {
 
   public isQueueProcessing(): boolean {
     return this.isProcessing;
+  }
+
+  public clearTasksByMerchant(merchant: string): void {
+    // Remove all tasks that have the merchant name in their data
+    this.queue = this.queue.filter(item => {
+      if (item.data && item.data.merchant) {
+        return item.data.merchant !== merchant;
+      }
+      return true;
+    });
+    logger.debug(`Cleared tasks for merchant: ${merchant}`, {
+      remainingQueueLength: this.queue.length,
+    });
   }
 }

@@ -125,9 +125,8 @@ export class DBSEmailParser implements EmailParser {
     email: Email
   ): void {
     const timestamp = new Date().toISOString();
-    const merchantId = `${merchant
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "_")}_${Date.now()}`;
+    // Use only merchant name as ID since we only need to categorize each merchant once
+    const merchantId = merchant.toLowerCase().replace(/[^a-z0-9]/g, "_");
 
     const event: MerchantCategorizationEvent = {
       merchant,

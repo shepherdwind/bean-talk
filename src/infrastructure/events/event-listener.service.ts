@@ -42,6 +42,9 @@ export class EventListenerService {
     this.eventEmitter.on(
       EventTypes.MERCHANT_NEEDS_CATEGORIZATION,
       async (data: MerchantCategorizationEvent) => {
+        // Clear any existing tasks for this merchant before enqueueing new one
+        this.messageQueue.clearTasksByMerchant(data.merchant);
+        
         // Use merchantId as taskId for tracking
         this.messageQueue.enqueue(
           EventTypes.MERCHANT_NEEDS_CATEGORIZATION,
@@ -54,12 +57,12 @@ export class EventListenerService {
     this.eventEmitter.on(
       EventTypes.MERCHANT_CATEGORY_SELECTED,
       async (data: MerchantCategorySelectedEvent) => {
-        this.messageQueue.completeTask(data.merchantId);
         if (!data.selectedCategory) {
           logger.info(`Skipping categorization for merchant: ${data.merchant}`, {
             merchantId: data.merchantId,
             timestamp: data.timestamp,
           });
+          this.messageQueue.completeTask(data.merchantId);
           return;
         }
 
@@ -73,6 +76,7 @@ export class EventListenerService {
           selectedCategory: data.selectedCategory,
           timestamp: data.timestamp,
         });
+        this.messageQueue.completeTask(data.merchantId);
       }
     );
 
