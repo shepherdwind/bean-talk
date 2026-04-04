@@ -6,6 +6,7 @@ import { ApplicationEventEmitter } from '../../../events/event-emitter';
 import { Logger } from '../../../utils';
 import { MESSAGES } from '../categorization-constants';
 import { EventTypes } from '../../../events/event-types';
+import { CommandHandlers } from '../../command-handlers';
 
 // Mock dependencies
 jest.mock('telegraf');
@@ -32,7 +33,8 @@ describe('CategorizationCommandHandler', () => {
       telegram: {
         sendMessage: mockSendMessage
       },
-      action: jest.fn().mockReturnThis()
+      action: jest.fn().mockReturnThis(),
+      on: jest.fn().mockReturnThis()
     } as unknown as jest.Mocked<Telegraf>;
     
     mockNlpService = {
@@ -58,8 +60,13 @@ describe('CategorizationCommandHandler', () => {
       return null;
     });
 
-    // Create handler instance
-    handler = new CategorizationCommandHandler(mockBot);
+    // Create handler instance with mock command handlers
+    const mockCommandHandlers = {
+      setUserState: jest.fn(),
+      getUserState: jest.fn(),
+      resetUserState: jest.fn(),
+    } as unknown as CommandHandlers;
+    handler = new CategorizationCommandHandler(mockBot, mockCommandHandlers);
   });
 
   describe('sendNotification', () => {
@@ -126,7 +133,6 @@ describe('CategorizationCommandHandler', () => {
       // Assert
       expect(ctx.answerCbQuery).toHaveBeenCalled();
       expect(ctx.reply).toHaveBeenCalled();
-      expect(handler['activeCategorizations'].has('123456')).toBe(true);
     });
   });
 
@@ -238,7 +244,6 @@ describe('CategorizationCommandHandler', () => {
         MESSAGES.CATEGORY_SELECTED('Test Merchant', selectedCategory)
       );
       expect(handler['pendingCategorizations'].has(merchantId)).toBe(false);
-      expect(handler['activeCategorizations'].has('123456')).toBe(false);
       expect(handler['categorizationMap'].has(shortId)).toBe(false);
     });
 
