@@ -34,9 +34,9 @@ export class CommandHandlers {
     // 先创建 CategorizationCommandHandler，因为它需要 CommandHandlers 实例
     this.categorizationHandler = new CategorizationCommandHandler(bot, this);
 
-    this.queryHandler = new QueryCommandHandler(bot);
+    this.queryHandler = new QueryCommandHandler(bot as any);
     this.addHandler = new AddCommandHandler(bot, this);
-    this.customQueryHandler = new CustomQueryCommandHandler(bot);
+    this.customQueryHandler = new CustomQueryCommandHandler(bot as any);
 
     this.setupMessageHandler();
     this.setupCommandHandlers();
@@ -85,7 +85,7 @@ export class CommandHandlers {
 
           case UserState.IDLE:
           default:
-            const handledByCustomQuery = await this.customQueryHandler.handle(ctx);
+            const handledByCustomQuery = await this.customQueryHandler.handle(ctx as any);
             if (handledByCustomQuery) {
               break;
             }
@@ -181,7 +181,7 @@ export class CommandHandlers {
     // Set up query command
     this.bot.command("query", async (ctx) => {
       try {
-        await this.queryHandler.handle(ctx);
+        await this.queryHandler.handle(ctx as any);
       } catch (error) {
         this.logger.error("Error handling query command:", error);
         await ctx.reply(

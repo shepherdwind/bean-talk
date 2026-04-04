@@ -1,4 +1,3 @@
-import { Context } from 'telegraf';
 import { ILogger, container, Logger } from '../../utils';
 
 export abstract class BaseCommandHandler {
@@ -8,5 +7,5 @@ export abstract class BaseCommandHandler {
     this.logger = container.getByClass(Logger);
   }
 
-  abstract handle(ctx: Context, ...args: any[]): Promise<boolean | void>;
+  abstract handle(ctx: unknown, ...args: unknown[]): Promise<boolean | void>;
 } 
