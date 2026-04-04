@@ -8,7 +8,7 @@ Replace Telegraf with grammY and @grammyjs/conversations to fix lifecycle/state 
 
 | # | Task | Status | Depends On | File |
 |---|------|--------|------------|------|
-| 0 | Fix broken tests and establish test baseline | reviewed | — | [000](000-test-baseline.md) |
+| 0 | Fix broken tests and establish test baseline | done (PR #1) | — | [000](000-test-baseline.md) |
 | 1 | Set up grammY core with session middleware | pending | 0 | [001](001-setup-grammy-core.md) |
 | 2 | Migrate query commands (stateless) | pending | 1 | [002](002-migrate-query-commands.md) |
 | 3 | Rewrite add-bill flow as grammY conversation | pending | 1 | [003](003-rewrite-add-bill-conversation.md) |
