@@ -1,17 +1,28 @@
 import OpenAI from 'openai';
 import { logger } from '../utils/logger';
 
+export interface OpenAIAdapterOptions {
+  apiKey: string;
+  baseURL?: string;
+  model?: string;
+}
+
 export class OpenAIAdapter {
   private openai: OpenAI;
+  private model: string;
 
-  constructor(private apiKey: string) {
-    this.openai = new OpenAI({ apiKey });
+  constructor(options: OpenAIAdapterOptions) {
+    this.openai = new OpenAI({
+      apiKey: options.apiKey,
+      baseURL: options.baseURL,
+    });
+    this.model = options.model || 'gpt-4o-mini';
   }
 
   async processMessage(systemPrompt: string, userMessage: string): Promise<string> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: this.model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }

@@ -31,7 +31,11 @@ export async function initializeContainer(): Promise<void> {
   container.registerClass(EventListenerService, eventListenerService);
 
   // Initialize OpenAI adapter and register it with Class
-  const openaiAdapter = new OpenAIAdapter(process.env.OPENAI_API_KEY || '');
+  const openaiAdapter = new OpenAIAdapter({
+    apiKey: process.env.OPENAI_API_KEY || '',
+    baseURL: process.env.OPENAI_BASE_URL,
+    model: process.env.OPENAI_MODEL,
+  });
   container.registerClass(OpenAIAdapter, openaiAdapter);
   
   // Register the EmailParserFactory with Class
