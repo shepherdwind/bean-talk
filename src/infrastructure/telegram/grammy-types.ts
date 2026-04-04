@@ -1,8 +1,13 @@
 import { Context, SessionFlavor } from 'grammy';
 import { ConversationFlavor } from '@grammyjs/conversations';
 
+export interface PendingMerchant {
+  merchantId: string;
+  merchant: string;
+}
+
 export interface SessionData {
-  // Reserved for future use by conversation handlers
+  pendingMerchants?: Record<string, PendingMerchant>;
 }
 
 type BaseContext = Context & SessionFlavor<SessionData>;
