@@ -17,41 +17,26 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_build_base: ${{ steps.check-beancount-version.outputs.should_build_base }}
-      should_build_app: ${{ steps.check-app-version.outputs.should_build_app }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Configure Git
-        run: |
-          git config --global init.defaultBranch main
-          git branch -m main || true
-
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Get beancount version
-        id: beancount-version
-        run: |
-          BEANCOUNT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/config/beancount-version.yml)
-          echo "version=$BEANCOUNT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Check beancount version change
         id: check-beancount-version
         run: |
-          # Get current version
           CURRENT_VERSION=$(grep -oP 'beancount_version: "\K[0-9.]+' .github/config/beancount-version.yml)
           echo "Current version: $CURRENT_VERSION"
 
-          # Get latest published version from GitHub Packages
           OLD_VERSION=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/users/shepherdwind/packages/container/bean-talk-base/versions" \
             | jq -r '.[0].metadata.container.tags[0]' || echo "none")
           echo "Published version: $OLD_VERSION"
 
-          # Compare versions
           if [ "$OLD_VERSION" = "$CURRENT_VERSION" ]; then
             echo "Beancount version unchanged, skipping base build"
             echo "should_build_base=false" >> $GITHUB_OUTPUT
@@ -60,39 +45,9 @@ jobs:
             echo "should_build_base=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check app version change
-        id: check-app-version
-        run: |
-          # Get current version
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          echo "Current version: $CURRENT_VERSION"
-
-          # Get latest published version from GitHub Packages
-          OLD_VERSION=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/users/shepherdwind/packages/container/bean-talk/versions" \
-            | jq -r '.[0].metadata.container.tags[0]' || echo "none")
-          echo "Published version: $OLD_VERSION"
-
-          # Compare versions
-          if [ "$OLD_VERSION" = "$CURRENT_VERSION" ]; then
-            echo "App version unchanged, skipping app build"
-            echo "should_build_app=false" >> $GITHUB_OUTPUT
-          else
-            echo "App version changed from $OLD_VERSION to $CURRENT_VERSION, proceeding with app build"
-            echo "should_build_app=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Debug outputs
-        run: |
-          echo "Debug: should_build_base value: ${{ steps.check-beancount-version.outputs.should_build_base }}"
-          echo "Debug: should_build_app value: ${{ steps.check-app-version.outputs.should_build_app }}"
-          echo "Debug: Job outputs:"
-          echo "should_build_base: ${{ steps.check-beancount-version.outputs.should_build_base }}"
-          echo "should_build_app: ${{ steps.check-app-version.outputs.should_build_app }}"
-
   build-base:
     needs: check-changes
-    if: ${{ needs.check-changes.outputs.should_build_base == 'true' }}
+    if: ${{ needs.check-changes.outputs.should_build_base == 'true' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -101,13 +56,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Configure Git
-        run: |
-          git config --global init.defaultBranch main
-          git branch -m main || true
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -135,7 +83,7 @@ jobs:
           file: ./Dockerfile.base
           target: beancount-base
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:${{ steps.beancount-version.outputs.version }}
@@ -152,16 +100,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Configure Git
-        run: |
-          git config --global init.defaultBranch main
-          git branch -m main || true
-
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Get package version
         id: package-version
@@ -171,6 +109,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to the Container registry
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -185,8 +124,6 @@ jobs:
           tags: |
             type=raw,value=latest
             type=raw,value=${{ steps.package-version.outputs.version }}
-            type=ref,event=branch
-            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
@@ -194,8 +131,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
@@ -203,9 +140,3 @@ jobs:
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             type=gha
           cache-to: type=gha
-
-      - name: Debug build condition
-        run: |
-          echo "Debug: should_build_app value: ${{ needs.check-changes.outputs.should_build_app }}"
-          echo "Debug: should_build_base value: ${{ needs.check-changes.outputs.should_build_base }}"
-          echo "Debug: build-base result: ${{ needs.build-base.result }}" 
