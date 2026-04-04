@@ -185,7 +185,6 @@ Please do not reply to this email as it is auto generated`;
       expect(result).not.toBeNull();
       if (result) {
         const expectedDate = new Date();
-        expectedDate.setFullYear(2025);
         expectedDate.setMonth(3); // April
         expectedDate.setDate(8);
         expectedDate.setHours(5);

@@ -10,7 +10,7 @@ describe('BeancountQueryService', () => {
   let service: TestBeancountQueryService;
 
   beforeEach(() => {
-    service = new TestBeancountQueryService('test.bean');
+    service = new TestBeancountQueryService();
   });
 
   describe('processQueryResult', () => {
