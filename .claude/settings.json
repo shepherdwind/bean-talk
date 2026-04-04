@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout*)",
+      "Bash(git pull*)",
+      "Bash(git push*)",
+      "Bash(git add*)",
+      "Bash(git add * && git commit*)",
+      "Bash(git commit*)",
+      "Bash(git diff*)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(gh pr *)",
+      "Bash(gh run *)",
+      "Bash(gh api *)",
+      "Bash(npm run build*)",
+      "Bash(npm run lint*)",
+      "Bash(npm test*)",
+      "Bash(npm ci*)",
+      "Bash(codex review*)",
+      "Bash(gemini *)",
+      "Bash(mkdir *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(wc *)",
+      "Bash(tail *)",
+      "Bash(head *)",
+      "Bash(ps *)",
+      "Bash(kill *)",
+      "Bash(which *)",
+      "Bash(find *)",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep"
+    ]
+  }
+}
