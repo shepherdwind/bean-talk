@@ -11,7 +11,7 @@ Replace Telegraf with grammY and @grammyjs/conversations to fix lifecycle/state 
 | 0 | Fix broken tests and establish test baseline | done (PR #1) | — | [000](000-test-baseline.md) |
 | 1 | Set up grammY core with session middleware | done (PR #2) | 0 | [001](001-setup-grammy-core.md) |
 | 2 | Migrate query commands (stateless) | done (PR #3) | 1 | [002](002-migrate-query-commands.md) |
-| 3 | Rewrite add-bill flow as grammY conversation | pending | 1 | [003](003-rewrite-add-bill-conversation.md) |
+| 3 | Rewrite add-bill flow as grammY conversation | reviewed | 1 | [003](003-rewrite-add-bill-conversation.md) |
 | 4 | Rewrite categorization flow as grammY conversation | pending | 1 | [004](004-rewrite-categorization-conversation.md) |
 | 5 | Migrate TelegramAdapter and remove Telegraf | pending | 2, 3, 4 | [005](005-migrate-telegram-adapter.md) |
 | 6 | Wire event-driven categorization entry | pending | 4, 5 | [006](006-wire-event-driven-categorization.md) |
