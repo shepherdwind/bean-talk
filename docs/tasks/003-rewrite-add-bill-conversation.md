@@ -46,11 +46,12 @@ async function addBillConversation(conversation: Conversation<BotContext>, ctx: 
 
 ## Acceptance criteria
 
+- 先编写 add-bill conversation 的测试（happy path + cancel + 异常输入），再实现
 - Full add-bill flow works: `/add` → enter text → confirm/cancel → done
 - No separate Maps for state/transactionData
 - Conversation auto-cleans up on completion, cancellation, or `/cancel`
 - Side effects (NLP call, save transaction) wrapped in `conversation.external()`
-- `npm run build` passes
+- `npm test` 全部通过
 
 ## Dependencies
 

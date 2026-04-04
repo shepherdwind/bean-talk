@@ -27,11 +27,12 @@ Port `QueryCommandHandler` and `CustomQueryCommandHandler` to grammY API. These 
 
 ## Acceptance criteria
 
+- 先编写 query 命令和 custom query 的测试用例，再迁移实现
 - `/query` shows time range keyboard, callback selects range and returns results
 - Free-text starting with `查` triggers custom query
 - No Telegraf imports remain in these files
 - `console.error` replaced with logger
-- `npm run build` passes
+- `npm test` 全部通过
 
 ## Dependencies
 

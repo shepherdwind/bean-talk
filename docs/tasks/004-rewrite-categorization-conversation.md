@@ -61,12 +61,13 @@ async function categorizationConversation(conversation: Conversation<BotContext>
 
 ## Acceptance criteria
 
-- Categorization flow works: notification → click → enter context → select category → done
+- 先编写 categorization conversation 的测试（happy path + cancel），再实现
+- Categorization flow works: click → enter context → select category → done
 - No separate Maps
 - No circular dependency with CommandHandlers
 - Side effects wrapped in `conversation.external()`
 - Queue advancement via event after selection
-- `npm run build` passes
+- `npm test` 全部通过
 
 ## Dependencies
 

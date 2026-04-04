@@ -26,11 +26,12 @@ Replace Telegraf with grammY Bot, configure session (file-based persistent store
 
 ## Acceptance criteria
 
+- 先编写 Bot 初始化、session 持久化、conversation 注册的测试，再实现
 - Bot can start and respond to `/start`
 - `ctx.session` is available and persists to disk (file-based JSON)
 - Conversations plugin is registered and `ctx.conversation` is available
 - Old Telegraf types are not imported in any new files
-- `npm run build` passes
+- `npm test` 全部通过
 
 ## Dependencies
 

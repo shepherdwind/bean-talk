@@ -37,13 +37,14 @@ Rewire `TelegramAdapter` to use grammY Bot. Remove `CommandHandlers` class entir
 
 ## Acceptance criteria
 
+- 先编写 TelegramAdapter 集成测试（命令注册、conversation 注册、middleware 链），再实现
 - No `telegraf` import anywhere in codebase
 - `npm ls telegraf` shows not installed
 - `UserState` Map eliminated
 - `transactionData` Map eliminated
 - Bot launches, all commands work: `/start`, `/add`, `/query`, `/cancel`
 - All conversations work: add-bill, categorization
-- `npm run build` passes
+- `npm test` 全部通过
 
 ## Dependencies
 

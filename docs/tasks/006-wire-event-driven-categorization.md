@@ -35,11 +35,12 @@ grammY conversations are entered via `ctx.conversation.enter()` which requires a
 
 ## Acceptance criteria
 
+- 先编写 event → notification → conversation entry 的集成测试，再实现
 - Email event → notification sent → user clicks → enters categorization conversation
 - Queue advances after conversation completes or times out
 - No state leaks if user ignores the notification
 - Multiple pending categorizations are queued and processed sequentially
-- `npm run build` passes
+- `npm test` 全部通过
 
 ## Dependencies
 
