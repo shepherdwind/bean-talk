@@ -1,9 +1,9 @@
-import { Context, Telegraf } from 'telegraf';
+import { Bot, InlineKeyboard } from 'grammy';
 import { BaseCommandHandler } from './base-command-handler';
-import { Markup } from 'telegraf';
 import { BeancountQueryService } from '../../beancount/beancount-query.service';
 import { container } from '../../utils';
 import { formatQueryResult } from '../../utils/query-result-formatter';
+import { BotContext } from '../grammy-types';
 
 export enum TimeRange {
   TODAY = 'query_today',
@@ -24,49 +24,62 @@ const TimeRangeDisplayText: Record<TimeRange, string> = {
 };
 
 export class QueryCommandHandler extends BaseCommandHandler {
-  private bot: Telegraf;
+  private bot: Bot<BotContext>;
   private beancountService: BeancountQueryService;
 
-  constructor(bot: Telegraf) {
+  constructor(bot: Bot<BotContext>) {
     super();
     this.bot = bot;
     this.beancountService = container.getByClass(BeancountQueryService);
-    this.setupActionHandlers();
+    this.registerCallbackHandlers();
   }
 
-  private setupActionHandlers(): void {
-    this.bot.action(Object.values(TimeRange), async (ctx: Context) => {
-      try {
-        const timeRange = (ctx.callbackQuery as any).data as TimeRange;
-        await this.handleTimeRange(ctx, timeRange);
-        await ctx.answerCbQuery();
-      } catch (error) {
-        console.error('Error handling time range selection:', error);
-        await ctx.reply('Sorry, I encountered an error while processing your selection.');
-      }
-    });
+  private registerCallbackHandlers(): void {
+    const timeRangeValues = Object.values(TimeRange);
+    const bot = this.bot as any;
+
+    if (typeof bot.callbackQuery === 'function') {
+      // grammY path
+      bot.callbackQuery(timeRangeValues, async (ctx: BotContext) => {
+        try {
+          const timeRange = (ctx.callbackQuery as any).data as TimeRange;
+          await this.handleTimeRange(ctx, timeRange);
+          await (ctx as any).answerCallbackQuery();
+        } catch (error) {
+          this.logger.error('Error handling time range selection:', error);
+          await ctx.reply('Sorry, I encountered an error while processing your selection.');
+        }
+      });
+    } else if (typeof bot.action === 'function') {
+      // Telegraf path (legacy — removed in Task 5)
+      bot.action(timeRangeValues, async (ctx: any) => {
+        try {
+          const timeRange = ctx.callbackQuery?.data as TimeRange;
+          await this.handleTimeRange(ctx, timeRange);
+          await ctx.answerCbQuery();
+        } catch (error) {
+          this.logger.error('Error handling time range selection:', error);
+          await ctx.reply('Sorry, I encountered an error while processing your selection.');
+        }
+      });
+    }
   }
 
-  async handle(ctx: Context, ...args: any[]): Promise<void> {
-    const keyboard = Markup.inlineKeyboard([
-      [
-        Markup.button.callback(TimeRangeDisplayText[TimeRange.TODAY], TimeRange.TODAY),
-        Markup.button.callback(TimeRangeDisplayText[TimeRange.YESTERDAY], TimeRange.YESTERDAY)
-      ],
-      [
-        Markup.button.callback(TimeRangeDisplayText[TimeRange.THIS_WEEK], TimeRange.THIS_WEEK),
-        Markup.button.callback(TimeRangeDisplayText[TimeRange.LAST_WEEK], TimeRange.LAST_WEEK)
-      ],
-      [
-        Markup.button.callback(TimeRangeDisplayText[TimeRange.THIS_MONTH], TimeRange.THIS_MONTH),
-        Markup.button.callback(TimeRangeDisplayText[TimeRange.LAST_MONTH], TimeRange.LAST_MONTH)
-      ]
-    ]);
+  async handle(ctx: BotContext): Promise<void> {
+    const keyboard = new InlineKeyboard()
+      .text(TimeRangeDisplayText[TimeRange.TODAY], TimeRange.TODAY)
+      .text(TimeRangeDisplayText[TimeRange.YESTERDAY], TimeRange.YESTERDAY)
+      .row()
+      .text(TimeRangeDisplayText[TimeRange.THIS_WEEK], TimeRange.THIS_WEEK)
+      .text(TimeRangeDisplayText[TimeRange.LAST_WEEK], TimeRange.LAST_WEEK)
+      .row()
+      .text(TimeRangeDisplayText[TimeRange.THIS_MONTH], TimeRange.THIS_MONTH)
+      .text(TimeRangeDisplayText[TimeRange.LAST_MONTH], TimeRange.LAST_MONTH);
 
-    await ctx.reply('Please select a time range:', keyboard);
+    await ctx.reply('Please select a time range:', { reply_markup: keyboard });
   }
 
-  async handleTimeRange(ctx: Context, timeRange: TimeRange): Promise<void> {
+  async handleTimeRange(ctx: BotContext, timeRange: TimeRange): Promise<void> {
     switch (timeRange) {
       case TimeRange.TODAY:
         await this.handleToday(ctx);
@@ -89,9 +102,8 @@ export class QueryCommandHandler extends BaseCommandHandler {
     }
   }
 
-  private async processQuery(ctx: Context, startDate: Date, endDate: Date, timeRange: TimeRange): Promise<void> {
+  private async processQuery(ctx: BotContext, startDate: Date, endDate: Date, timeRange: TimeRange): Promise<void> {
     try {
-      // Adjust dates to include the full range
       const adjustedStartDate = new Date(startDate);
       adjustedStartDate.setDate(adjustedStartDate.getDate() - 1);
       const adjustedEndDate = new Date(endDate);
@@ -102,23 +114,23 @@ export class QueryCommandHandler extends BaseCommandHandler {
       const formattedMessage = formatQueryResult(result);
       await ctx.reply(formattedMessage, { parse_mode: 'HTML' });
     } catch (error) {
-      console.error('Error processing query:', error);
+      this.logger.error('Error processing query:', error);
       await ctx.reply('Sorry, I encountered an error while processing your query.');
     }
   }
 
-  private async handleToday(ctx: Context): Promise<void> {
+  private async handleToday(ctx: BotContext): Promise<void> {
     const today = new Date();
     await this.processQuery(ctx, today, today, TimeRange.TODAY);
   }
 
-  private async handleYesterday(ctx: Context): Promise<void> {
+  private async handleYesterday(ctx: BotContext): Promise<void> {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     await this.processQuery(ctx, yesterday, yesterday, TimeRange.YESTERDAY);
   }
 
-  private async handleThisWeek(ctx: Context): Promise<void> {
+  private async handleThisWeek(ctx: BotContext): Promise<void> {
     const today = new Date();
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay());
@@ -127,7 +139,7 @@ export class QueryCommandHandler extends BaseCommandHandler {
     await this.processQuery(ctx, startOfWeek, endOfWeek, TimeRange.THIS_WEEK);
   }
 
-  private async handleLastWeek(ctx: Context): Promise<void> {
+  private async handleLastWeek(ctx: BotContext): Promise<void> {
     const today = new Date();
     const startOfLastWeek = new Date(today);
     startOfLastWeek.setDate(today.getDate() - today.getDay() - 7);
@@ -136,17 +148,17 @@ export class QueryCommandHandler extends BaseCommandHandler {
     await this.processQuery(ctx, startOfLastWeek, endOfLastWeek, TimeRange.LAST_WEEK);
   }
 
-  private async handleThisMonth(ctx: Context): Promise<void> {
+  private async handleThisMonth(ctx: BotContext): Promise<void> {
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     await this.processQuery(ctx, startOfMonth, endOfMonth, TimeRange.THIS_MONTH);
   }
 
-  private async handleLastMonth(ctx: Context): Promise<void> {
+  private async handleLastMonth(ctx: BotContext): Promise<void> {
     const today = new Date();
     const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
     await this.processQuery(ctx, startOfLastMonth, endOfLastMonth, TimeRange.LAST_MONTH);
   }
-} 
+}
