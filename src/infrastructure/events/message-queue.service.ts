@@ -3,6 +3,7 @@ import { logger } from "../utils/logger";
 import { getQueueEventName } from "./event-types";
 import { container } from "../utils";
 import { AutomationService } from "../../application/services/automation.service";
+import { removePendingMerchantByMerchantId } from "../telegram/telegram.adapter";
 
 interface QueueItem {
   event: string;
@@ -11,13 +12,18 @@ interface QueueItem {
   taskId?: string;
 }
 
+const DEFAULT_TASK_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
 export class MessageQueueService {
   private queue: QueueItem[] = [];
   private isProcessing: boolean = false;
   private eventEmitter: EventEmitter;
+  private taskTimeoutMs: number;
+  private timeoutTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(eventEmitter: EventEmitter) {
+  constructor(eventEmitter: EventEmitter, taskTimeoutMs?: number) {
     this.eventEmitter = eventEmitter;
+    this.taskTimeoutMs = taskTimeoutMs ?? DEFAULT_TASK_TIMEOUT_MS;
   }
 
   public enqueue(event: string, data: any, taskId?: string): void {
@@ -45,15 +51,17 @@ export class MessageQueueService {
   }
 
   public completeTask(taskId: string): void {
-    this.isProcessing = false;
-    
     // Find the index of the task with matching taskId
     const taskIndex = this.queue.findIndex(item => item.taskId === taskId);
-    
+
     if (taskIndex === -1) {
-      logger.debug(`No task found with ID: ${taskId}`);
+      // Task already removed (e.g., by timeout) — do not disturb current processing
+      logger.debug(`No task found with ID: ${taskId}, ignoring late completion`);
       return;
     }
+
+    this.isProcessing = false;
+    this.clearTaskTimeout();
 
     // Remove the specific task from the queue
     this.queue.splice(taskIndex, 1);
@@ -81,6 +89,7 @@ export class MessageQueueService {
     }
 
     this.isProcessing = true;
+    this.startTaskTimeout();
 
     const item = this.queue[0];
     const queueEventName = getQueueEventName(item.event);
@@ -97,6 +106,30 @@ export class MessageQueueService {
       });
     } catch (error) {
       logger.error(`Error processing event ${queueEventName}:`, error);
+    }
+  }
+
+  private startTaskTimeout(): void {
+    this.clearTaskTimeout();
+    if (this.taskTimeoutMs <= 0) return;
+
+    this.timeoutTimer = setTimeout(() => {
+      const item = this.queue[0];
+      if (!item?.taskId) return;
+
+      logger.warn(`Task ${item.taskId} timed out after ${this.taskTimeoutMs}ms, auto-completing`);
+      // Clean up the pending merchant registry to invalidate stale Telegram buttons
+      if (item.taskId) {
+        removePendingMerchantByMerchantId(item.taskId);
+      }
+      this.completeTask(item.taskId);
+    }, this.taskTimeoutMs);
+  }
+
+  private clearTaskTimeout(): void {
+    if (this.timeoutTimer) {
+      clearTimeout(this.timeoutTimer);
+      this.timeoutTimer = null;
     }
   }
 
