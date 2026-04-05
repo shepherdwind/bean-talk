@@ -1,7 +1,7 @@
 import { Bot, InlineKeyboard } from 'grammy';
-import { BaseCommandHandler } from './base-command-handler';
 import { BeancountQueryService } from '../../beancount/beancount-query.service';
-import { container } from '../../utils';
+import { container, Logger } from '../../utils';
+import { ILogger } from '../../utils';
 import { formatQueryResult } from '../../utils/query-result-formatter';
 import { BotContext } from '../grammy-types';
 
@@ -23,46 +23,29 @@ const TimeRangeDisplayText: Record<TimeRange, string> = {
   [TimeRange.LAST_MONTH]: 'Last Month'
 };
 
-export class QueryCommandHandler extends BaseCommandHandler {
+export class QueryCommandHandler {
   private bot: Bot<BotContext>;
   private beancountService: BeancountQueryService;
+  private logger: ILogger;
 
   constructor(bot: Bot<BotContext>) {
-    super();
     this.bot = bot;
     this.beancountService = container.getByClass(BeancountQueryService);
-    this.registerCallbackHandlers();
+    this.logger = container.getByClass(Logger);
   }
 
-  private registerCallbackHandlers(): void {
+  registerCallbackHandlers(): void {
     const timeRangeValues = Object.values(TimeRange);
-    const bot = this.bot as any;
-
-    if (typeof bot.callbackQuery === 'function') {
-      // grammY path
-      bot.callbackQuery(timeRangeValues, async (ctx: BotContext) => {
-        try {
-          const timeRange = (ctx.callbackQuery as any).data as TimeRange;
-          await this.handleTimeRange(ctx, timeRange);
-          await (ctx as any).answerCallbackQuery();
-        } catch (error) {
-          this.logger.error('Error handling time range selection:', error);
-          await ctx.reply('Sorry, I encountered an error while processing your selection.');
-        }
-      });
-    } else if (typeof bot.action === 'function') {
-      // Telegraf path (legacy — removed in Task 5)
-      bot.action(timeRangeValues, async (ctx: any) => {
-        try {
-          const timeRange = ctx.callbackQuery?.data as TimeRange;
-          await this.handleTimeRange(ctx, timeRange);
-          await ctx.answerCbQuery();
-        } catch (error) {
-          this.logger.error('Error handling time range selection:', error);
-          await ctx.reply('Sorry, I encountered an error while processing your selection.');
-        }
-      });
-    }
+    this.bot.callbackQuery(timeRangeValues, async (ctx) => {
+      try {
+        const timeRange = ctx.callbackQuery.data as TimeRange;
+        await this.handleTimeRange(ctx, timeRange);
+        await ctx.answerCallbackQuery();
+      } catch (error) {
+        this.logger.error('Error handling time range selection:', error);
+        await ctx.reply('Sorry, I encountered an error while processing your selection.');
+      }
+    });
   }
 
   async handle(ctx: BotContext): Promise<void> {
@@ -79,26 +62,14 @@ export class QueryCommandHandler extends BaseCommandHandler {
     await ctx.reply('Please select a time range:', { reply_markup: keyboard });
   }
 
-  async handleTimeRange(ctx: BotContext, timeRange: TimeRange): Promise<void> {
+  private async handleTimeRange(ctx: BotContext, timeRange: TimeRange): Promise<void> {
     switch (timeRange) {
-      case TimeRange.TODAY:
-        await this.handleToday(ctx);
-        break;
-      case TimeRange.YESTERDAY:
-        await this.handleYesterday(ctx);
-        break;
-      case TimeRange.THIS_WEEK:
-        await this.handleThisWeek(ctx);
-        break;
-      case TimeRange.LAST_WEEK:
-        await this.handleLastWeek(ctx);
-        break;
-      case TimeRange.THIS_MONTH:
-        await this.handleThisMonth(ctx);
-        break;
-      case TimeRange.LAST_MONTH:
-        await this.handleLastMonth(ctx);
-        break;
+      case TimeRange.TODAY: return this.handleToday(ctx);
+      case TimeRange.YESTERDAY: return this.handleYesterday(ctx);
+      case TimeRange.THIS_WEEK: return this.handleThisWeek(ctx);
+      case TimeRange.LAST_WEEK: return this.handleLastWeek(ctx);
+      case TimeRange.THIS_MONTH: return this.handleThisMonth(ctx);
+      case TimeRange.LAST_MONTH: return this.handleLastMonth(ctx);
     }
   }
 
