@@ -113,7 +113,7 @@ export class MessageQueueService {
     this.clearTaskTimeout();
     if (this.taskTimeoutMs <= 0) return;
 
-    this.timeoutTimer = setTimeout(() => {
+    const timer = setTimeout(() => {
       const item = this.queue[0];
       if (!item?.taskId) return;
 
@@ -124,6 +124,9 @@ export class MessageQueueService {
       }
       this.completeTask(item.taskId);
     }, this.taskTimeoutMs);
+    // Don't keep the process alive just for the timeout
+    timer.unref();
+    this.timeoutTimer = timer;
   }
 
   private clearTaskTimeout(): void {

@@ -45,7 +45,7 @@ describe('DBSEmailParser', () => {
   });
 
   describe('parse', () => {
-    it('should correctly parse a DBS transaction alert email', () => {
+    it('should correctly parse a DBS transaction alert email', async () => {
       const emailBody = `Card Transaction Alert
 Transaction Ref: 510805332088
 Dear Sir / Madam,
@@ -66,7 +66,7 @@ Please do not reply to this email as it is auto generated`;
         body: emailBody
       };
 
-      const result = parser.parse(email);
+      const result = await parser.parse(email);
 
       expect(result).not.toBeNull();
       if (result) {
@@ -104,7 +104,7 @@ Please do not reply to this email as it is auto generated`;
       }
     });
 
-    it('should correctly parse a DBS transaction alert email with compact date format', () => {
+    it('should correctly parse a DBS transaction alert email with compact date format', async () => {
       const emailBody = `Card Transaction Alert
 Transaction Ref: 510805332088
 Dear Sir / Madam,
@@ -125,7 +125,7 @@ Please do not reply to this email as it is auto generated`;
         body: emailBody
       };
 
-      const result = parser.parse(email);
+      const result = await parser.parse(email);
 
       expect(result).not.toBeNull();
       if (result) {
@@ -163,7 +163,7 @@ Please do not reply to this email as it is auto generated`;
       }
     });
 
-    it('should correctly parse a DBS transaction alert email with tab-separated date format', () => {
+    it('should correctly parse a DBS transaction alert email with tab-separated date format', async () => {
       const emailBody = `Card Transaction Alert
 Transaction Ref: 510805332088
 Dear Sir / Madam,
@@ -180,7 +180,7 @@ Please do not reply to this email as it is auto generated`;
         body: emailBody
       };
 
-      const result = parser.parse(email);
+      const result = await parser.parse(email);
 
       expect(result).not.toBeNull();
       if (result) {
@@ -218,7 +218,7 @@ Please do not reply to this email as it is auto generated`;
       }
     });
 
-    it('should correctly parse a DBS transaction alert email with S$ currency format', () => {
+    it('should correctly parse a DBS transaction alert email with S$ currency format', async () => {
       const emailBody = `Card Transaction Alert
 Transaction Ref: 510805332088
 Dear Sir / Madam,
@@ -237,7 +237,7 @@ Please do not reply to this email as it is auto generated`;
         body: emailBody
       };
 
-      const result = parser.parse(email);
+      const result = await parser.parse(email);
 
       expect(result).not.toBeNull();
       if (result) {
@@ -275,7 +275,7 @@ Please do not reply to this email as it is auto generated`;
       }
     });
 
-    it('should return null for invalid email format', () => {
+    it('should return null for invalid email format', async () => {
       const email: Email = {
         id: 'test-id',
         subject: 'Card Transaction Alert',
@@ -284,7 +284,7 @@ Please do not reply to this email as it is auto generated`;
         body: 'Invalid email body without required fields'
       };
 
-      const result = parser.parse(email);
+      const result = await parser.parse(email);
       expect(result).toBeNull();
     });
   });

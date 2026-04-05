@@ -31,7 +31,7 @@ export class EmailParserFactory {
   /**
    * Parse an email into a transaction using the appropriate parser
    */
-  parseEmail(email: Email): Transaction | null {
+  async parseEmail(email: Email): Promise<Transaction | null> {
     const parser = this.findParser(email);
     if (!parser) {
       console.log(`No parser found for email: ${email.subject} from ${email.from}`);
