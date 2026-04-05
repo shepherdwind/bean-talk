@@ -30,8 +30,8 @@ Raise test coverage from 46.92% to 90%+ across the entire repository by adding u
 
 | # | Task | Status | Depends On | File |
 |---|------|--------|------------|------|
-| 7 | Domain & application layer test coverage | reviewed | — | [007](007-domain-app-test-coverage.md) |
-| 8 | Infrastructure utilities & events test coverage | pending | — | [008](008-infra-utils-events-test-coverage.md) |
+| 7 | Domain & application layer test coverage | done (PR #9) | — | [007](007-domain-app-test-coverage.md) |
+| 8 | Infrastructure utilities & events test coverage | reviewed | — | [008](008-infra-utils-events-test-coverage.md) |
 | 9 | Infrastructure adapters test coverage | pending | — | [009](009-infra-adapters-test-coverage.md) |
 
 ### Dependency Graph

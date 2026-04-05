@@ -1,4 +1,16 @@
 import { BeancountQueryService } from '../beancount-query.service';
+import * as child_process from 'child_process';
+import * as util from 'util';
+
+// Mock child_process.exec for executeQuery tests
+jest.mock('child_process');
+jest.mock('util', () => {
+  const original = jest.requireActual('util');
+  return {
+    ...original,
+    promisify: jest.fn((fn: unknown) => fn),
+  };
+});
 
 class TestBeancountQueryService extends BeancountQueryService {
   public processQueryResult(rawResult: string) {
@@ -97,4 +109,38 @@ Assets:DBS:SGD:Wife            -102.32 SGD
       });
     });
   });
-}); 
+
+  describe('queryByDateRange', () => {
+    it('should execute query and process result', async () => {
+      const mockExec = child_process.exec as unknown as jest.Mock;
+      mockExec.mockResolvedValue({
+        stdout: `
+           account                  ps
+-----------------------------  -----------
+Assets:DBS:SGD:Saving            -50.00 SGD
+Expenses:Food                     50.00 SGD
+`,
+      });
+
+      const startDate = new Date('2024-03-01');
+      const endDate = new Date('2024-03-31');
+      const result = await service.queryByDateRange(startDate, endDate);
+
+      expect(result.assets).toHaveLength(1);
+      expect(result.expenses).toHaveLength(1);
+      expect(result.assets[0].amount).toBe(-50);
+    });
+
+    it('should throw when command execution fails', async () => {
+      const mockExec = child_process.exec as unknown as jest.Mock;
+      mockExec.mockRejectedValue(new Error('command not found'));
+
+      const startDate = new Date('2024-03-01');
+      const endDate = new Date('2024-03-31');
+
+      await expect(service.queryByDateRange(startDate, endDate)).rejects.toThrow(
+        'Failed to execute Beancount query'
+      );
+    });
+  });
+});
