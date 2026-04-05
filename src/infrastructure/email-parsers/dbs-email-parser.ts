@@ -16,6 +16,7 @@ import {
 } from "./dbs-transaction-extractor";
 import { EventTypes } from "../events/event-types";
 import { getCardAccount } from "../utils/telegram";
+import { NLPService } from "../../domain/services/nlp.service";
 /**
  * Interface for transaction creation parameters
  */
@@ -58,7 +59,7 @@ export class DBSEmailParser implements EmailParser {
   /**
    * Parses a DBS transaction alert email into a Transaction
    */
-  parse(email: Email): Transaction | null {
+  async parse(email: Email): Promise<Transaction | null> {
     if (!this.canParse(email)) {
       return null;
     }
@@ -71,13 +72,12 @@ export class DBSEmailParser implements EmailParser {
 
       const { amount, date, merchant, cardInfo, currency } = transactionData;
 
-      // Get merchant category from mapping
-      const category = this.getMerchantCategory(merchant, email);
+      // Get merchant category from mapping or AI
+      const category = await this.getMerchantCategory(merchant, email);
       if (!category) {
         return null;
       }
 
-      // Create transaction entries
       return this.createTransaction({
         date,
         merchant,
@@ -94,27 +94,52 @@ export class DBSEmailParser implements EmailParser {
     }
   }
 
+  private get nlpService(): NLPService {
+    return container.getByClass(NLPService);
+  }
+
+  private static readonly AUTO_CATEGORIZE_CONFIDENCE_THRESHOLD = 0.8;
+
   /**
-   * Gets category for merchant or handles new merchant categorization
+   * Gets category for merchant: mapping → AI auto → manual flow
    */
-  private getMerchantCategory(
+  private async getMerchantCategory(
     merchant: string,
     email: Email
-  ): AccountName | null {
-    const category = this.accountingService.findCategoryForMerchant(merchant);
-
-    if (!category) {
-      // If merchant not found in mapping, add it to the config file and emit event
-      this.accountingService.addMerchantToCategory(merchant);
-      logger.info(
-        `Merchant "${merchant}" not found in category mapping. Added to config for manual categorization.`
-      );
-
-      this.emitMerchantCategorizationEvent(merchant, email);
-      return null;
+  ): Promise<AccountName | null> {
+    // 1. Check mapping file (human-confirmed categories)
+    const mappedCategory = this.accountingService.findCategoryForMerchant(merchant);
+    if (mappedCategory) {
+      return mappedCategory as AccountName;
     }
 
-    return category as AccountName;
+    // 2. Try AI auto-categorization
+    const aiResult = await this.nlpService.autoCategorizeMerchant(merchant);
+    const validAccountNames = (Object.values(AccountName) as string[])
+      .filter(name => name.startsWith('Expenses:'));
+    if (
+      aiResult.confidence >= DBSEmailParser.AUTO_CATEGORIZE_CONFIDENCE_THRESHOLD &&
+      aiResult.category &&
+      validAccountNames.includes(aiResult.category)
+    ) {
+      logger.info(
+        `AI auto-categorized "${merchant}" → ${aiResult.category} (confidence: ${aiResult.confidence})`
+      );
+      return aiResult.category as AccountName;
+    }
+
+    if (aiResult.category && !validAccountNames.includes(aiResult.category)) {
+      logger.warn(
+        `AI returned invalid category "${aiResult.category}" for "${merchant}", falling back to manual`
+      );
+    }
+
+    // 3. Low confidence — notify for manual categorization
+    logger.info(
+      `AI uncertain for "${merchant}" (confidence: ${aiResult.confidence}), requesting manual categorization`
+    );
+    this.emitMerchantCategorizationEvent(merchant, email);
+    return null;
   }
 
   /**

@@ -14,5 +14,5 @@ export interface EmailParser {
    * Parses the email into a transaction
    * Returns null if the email cannot be parsed
    */
-  parse(email: Email): Transaction | null;
+  parse(email: Email): Transaction | null | Promise<Transaction | null>;
 } 

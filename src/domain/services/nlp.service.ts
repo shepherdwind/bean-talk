@@ -10,6 +10,11 @@ export interface CategoryOptions {
   suggestedNewCategory: string;
 }
 
+export interface AutoCategoryResult {
+  category: string;
+  confidence: number;
+}
+
 export interface ParsedExpenseData {
   amount: number;
   currency: string;
@@ -63,6 +68,45 @@ Respond in exactly this format, with each option on a new line.`;
     } catch (error) {
       logger.error('Error categorizing merchant:', error);
       throw error;
+    }
+  }
+
+  async autoCategorizeMerchant(merchant: string): Promise<AutoCategoryResult> {
+    try {
+      const expenseAccounts = this.accountingService.getAllAccountNames()
+        .filter(name => name.startsWith('Expenses:'));
+
+      const prompt = `You are a financial transaction categorizer. Given a merchant name, pick the best matching category from the list below.
+
+Merchant Name: ${merchant}
+
+Available expense categories:
+${expenseAccounts.join('\n')}
+
+Respond with ONLY a JSON object in this exact format, no other text:
+{"category": "the best matching category from the list", "confidence": 0.95}
+
+Rules:
+- confidence is a number between 0 and 1
+- Use 0.9+ for well-known merchants where the category is obvious
+- Use 0.5-0.8 for ambiguous merchants where the category is a guess
+- Use below 0.5 for completely unclear merchants
+- The category MUST be exactly one of the values from the provided list above, copy it exactly as shown`;
+
+      const response = await this.openaiAdapter.processMessage(prompt, '');
+      const jsonMatch = response.match(/\{.*\}/s);
+      if (!jsonMatch) {
+        return { category: '', confidence: 0 };
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        category: parsed.category || '',
+        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
+      };
+    } catch (error) {
+      logger.error('Error auto-categorizing merchant:', error);
+      return { category: '', confidence: 0 };
     }
   }
 

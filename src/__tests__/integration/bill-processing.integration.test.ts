@@ -161,7 +161,6 @@ describe('Bill Processing Integration Tests', () => {
   });
 
   afterEach(() => {
-    // Clean up temp directory
     fs.rmSync(tmpDir, { recursive: true, force: true });
     container.clear();
     eventEmitter.removeAllListeners();
@@ -241,14 +240,17 @@ Please do not reply to this email as it is auto generated`,
   });
 
   describe('Unknown merchant: email → event → queue → notification', () => {
-    it('should emit categorization event for unknown merchant', async () => {
-      // Empty mappings — merchant is unknown
+    it('should emit categorization event when AI confidence is low', async () => {
       merchantMappingMock.__setMappings({});
+
+      // AI returns low confidence — should trigger manual flow
+      mockOpenAIAdapter.processMessage.mockResolvedValue(
+        '{"category": "Expenses:Food:Dining", "confidence": 0.5}'
+      );
 
       const testEmail = createTestEmail();
       mockGmailAdapter.fetchUnreadEmails.mockResolvedValue([testEmail]);
 
-      // Track events
       const categorizationEvents: unknown[] = [];
       eventEmitter.on(EventTypes.MERCHANT_NEEDS_CATEGORIZATION, (data) => {
         categorizationEvents.push(data);
@@ -258,10 +260,10 @@ Please do not reply to this email as it is auto generated`,
       const automationService = container.getByClass(AutomationService);
       await automationService.scheduledCheck();
 
-      // Merchant should be added to mapping with empty category
-      expect(addMerchantToMapping).toHaveBeenCalledWith('GRAB FOOD', undefined);
+      // No mapping written (removed auto-add with empty category)
+      expect(addMerchantToMapping).not.toHaveBeenCalled();
 
-      // Event should have been emitted
+      // Event should have been emitted for manual categorization
       expect(categorizationEvents).toHaveLength(1);
       const event = categorizationEvents[0] as Record<string, unknown>;
       expect(event).toMatchObject({
@@ -269,12 +271,48 @@ Please do not reply to this email as it is auto generated`,
         merchantId: 'grab_food',
       });
 
-      // Email should NOT be marked as read (unknown merchant)
+      // Email should NOT be marked as read (needs manual categorization)
       expect(mockGmailAdapter.markAsRead).not.toHaveBeenCalled();
+    });
+
+    it('should auto-categorize when AI confidence is high', async () => {
+      merchantMappingMock.__setMappings({});
+
+      // AI returns high confidence — should auto-categorize
+      mockOpenAIAdapter.processMessage.mockResolvedValue(
+        '{"category": "Expenses:Food:Dining", "confidence": 0.95}'
+      );
+
+      const testEmail = createTestEmail();
+      mockGmailAdapter.fetchUnreadEmails.mockResolvedValue([testEmail]);
+
+      // Register listener BEFORE running scheduledCheck
+      const categorizationEvents: unknown[] = [];
+      eventEmitter.on(EventTypes.MERCHANT_NEEDS_CATEGORIZATION, (data) => {
+        categorizationEvents.push(data);
+      });
+
+      container.registerClassFactory(AutomationService, () => new AutomationService());
+      const automationService = container.getByClass(AutomationService);
+      await automationService.scheduledCheck();
+
+      // No manual categorization event (AI handled it)
+      expect(categorizationEvents).toHaveLength(0);
+
+      // Transaction should be written (auto-categorized)
+      expect(mockGmailAdapter.markAsRead).toHaveBeenCalledWith('test-email-001');
+
+      // No mapping written (AI handles it each time)
+      expect(addMerchantToMapping).not.toHaveBeenCalled();
     });
 
     it('should send Telegram notification through event listener and queue', async () => {
       merchantMappingMock.__setMappings({});
+
+      // AI returns low confidence to trigger manual flow
+      mockOpenAIAdapter.processMessage.mockResolvedValue(
+        '{"category": "Expenses:Food:Dining", "confidence": 0.3}'
+      );
 
       const testEmail = createTestEmail();
       mockGmailAdapter.fetchUnreadEmails.mockResolvedValue([testEmail]);
