@@ -34,7 +34,8 @@ export function createBot(options: BotOptions): Bot<BotContext> {
 
   // Baseline /start command
   bot.command('start', async (ctx) => {
-    await ctx.reply('Welcome to Bean Talk! Use /add to add a bill, /query to view reports.');
+    const chatId = ctx.chat.id;
+    await ctx.reply(`Welcome to Bean Talk! Use /add to add a bill, /query to view reports.\n\nYour chat ID: <code>${chatId}</code>`, { parse_mode: 'HTML' });
   });
 
   return bot;

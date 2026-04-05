@@ -115,11 +115,15 @@ export class TelegramAdapter {
         this.logger.error('Bot error occurred:', err);
       });
 
-      await this.bot.api.setMyCommands([
-        { command: 'start', description: 'Start the bot' },
-        { command: 'add', description: 'Add a new bill' },
-        { command: 'query', description: 'Query transactions' },
-      ]);
+      try {
+        await this.bot.api.setMyCommands([
+          { command: 'start', description: 'Start the bot' },
+          { command: 'add', description: 'Add a new bill' },
+          { command: 'query', description: 'Query transactions' },
+        ]);
+      } catch (error) {
+        this.logger.warn('Failed to set bot commands (non-fatal):', error);
+      }
 
       // bot.start() begins long polling and never resolves — do not await
       this.bot.start({
