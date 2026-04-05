@@ -14,7 +14,7 @@ Replace Telegraf with grammY and @grammyjs/conversations to fix lifecycle/state 
 | 3 | Rewrite add-bill flow as grammY conversation | done (PR #4) | 1 | [003](003-rewrite-add-bill-conversation.md) |
 | 4 | Rewrite categorization flow as grammY conversation | done (PR #5) | 1 | [004](004-rewrite-categorization-conversation.md) |
 | 5 | Migrate TelegramAdapter and remove Telegraf | done (PR #6) | 2, 3, 4 | [005](005-migrate-telegram-adapter.md) |
-| 6 | Wire event-driven categorization entry | reviewed | 4, 5 | [006](006-wire-event-driven-categorization.md) |
+| 6 | Wire event-driven categorization entry | done (PR #7) | 4, 5 | [006](006-wire-event-driven-categorization.md) |
 
 ## Dependency Graph
 
