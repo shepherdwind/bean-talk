@@ -1,10 +1,12 @@
-# Development Plan: Migrate Telegram Bot from Telegraf to grammY + Conversations
+# Development Plan
 
-## Goal
+## Phase 1: Migrate Telegram Bot from Telegraf to grammY + Conversations (done)
+
+### Goal
 
 Replace Telegraf with grammY and @grammyjs/conversations to fix lifecycle/state management chaos.
 
-## Tasks
+### Tasks
 
 | # | Task | Status | Depends On | File |
 |---|------|--------|------------|------|
@@ -16,22 +18,33 @@ Replace Telegraf with grammY and @grammyjs/conversations to fix lifecycle/state 
 | 5 | Migrate TelegramAdapter and remove Telegraf | done (PR #6) | 2, 3, 4 | [005](005-migrate-telegram-adapter.md) |
 | 6 | Wire event-driven categorization entry | done (PR #7) | 4, 5 | [006](006-wire-event-driven-categorization.md) |
 
-## Dependency Graph
+---
+
+## Phase 2: Achieve 90% Test Coverage
+
+### Goal
+
+Raise test coverage from 46.92% to 90%+ across the entire repository by adding unit tests for all untested or undertested modules. All tests mock external dependencies (OpenAI, Gmail, Telegram, filesystem).
+
+### Tasks
+
+| # | Task | Status | Depends On | File |
+|---|------|--------|------------|------|
+| 7 | Domain & application layer test coverage | pending | — | [007](007-domain-app-test-coverage.md) |
+| 8 | Infrastructure utilities & events test coverage | pending | — | [008](008-infra-utils-events-test-coverage.md) |
+| 9 | Infrastructure adapters test coverage | pending | — | [009](009-infra-adapters-test-coverage.md) |
+
+### Dependency Graph
 
 ```
-0 (test baseline)
-└── 1 (grammY core + session)
-    ├── 2 (query commands)
-    ├── 3 (add-bill conversation)
-    └── 4 (categorization conversation)
-        All of 2, 3, 4 ──► 5 (remove Telegraf)
-                            └── 6 (event-driven entry)
+7 (domain & app layer)  ─┐
+8 (utils & events)       ├── all independent, can run in parallel
+9 (infra adapters)       ─┘
 ```
 
-## Testing Strategy
+### Testing Strategy
 
-每个任务采用 TDD 流程：先写测试 → 实现 → 测试通过。
-
-1. **Task 0**: 修复现有断裂测试，补充 domain/infrastructure 层基线测试，确保 `npm test` 全部通过
-2. **Task 1-6**: 每个任务先编写该任务涉及功能的测试用例，再实现，完成后 `npm test` 全部通过
-3. 测试不依赖外部服务（OpenAI、Gmail、Telegram）——通过 mock adapter 隔离
+1. All tests mock external dependencies (OpenAI, Gmail API, Telegram Bot, filesystem, shell commands)
+2. Use constructor injection for testable dependencies
+3. Focus on branch coverage to hit the 90% target — test error paths and edge cases
+4. Each task targets specific modules and should bring the overall coverage above 90% when combined
