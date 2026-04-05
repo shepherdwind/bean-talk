@@ -91,7 +91,9 @@ Rules:
 - Use 0.9+ for well-known merchants where the category is obvious
 - Use 0.5-0.8 for ambiguous merchants where the category is a guess
 - Use below 0.5 for completely unclear merchants
-- The category MUST be exactly one of the values from the provided list above, copy it exactly as shown`;
+- The category MUST be exactly one of the values from the provided list above, copy it character-for-character
+- DO NOT invent, create, or suggest new categories — only use what is in the list
+- If no category in the list fits well, set confidence below 0.5`;
 
       const response = await this.openaiAdapter.processMessage(prompt, '');
       const jsonMatch = response.match(/\{.*\}/s);
