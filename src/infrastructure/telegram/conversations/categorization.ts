@@ -7,6 +7,7 @@ import { ApplicationEventEmitter } from '../../events/event-emitter';
 import { EventTypes } from '../../events/event-types';
 import { logger } from '../../utils/logger';
 import { MESSAGES, CALLBACK_PREFIXES } from '../commands/categorization-constants';
+import { getPendingMerchant, removePendingMerchant } from '../telegram.adapter';
 
 export const CATEGORIZATION_CONVERSATION_ID = 'categorization';
 
@@ -39,7 +40,7 @@ function emitCategorySelected(merchantId: string, merchant: string, selectedCate
 }
 
 export async function categorizationConversation(
-  conversation: Conversation<BotContext>,
+  conversation: Conversation<BotContext, BotContext>,
   ctx: BotContext,
 ): Promise<void> {
   // Extract merchantId from callback query data
@@ -50,14 +51,16 @@ export async function categorizationConversation(
     return;
   }
 
-  // The callback data format is: CATEGORIZE_MERCHANT + merchantId (full, not truncated).
-  // Task 6 wires the notification to use this format and populate session.pendingMerchants.
-  const merchantId = callbackData.slice(CALLBACK_PREFIXES.CATEGORIZE_MERCHANT.length);
+  // The callback data contains a short hash ID to stay within Telegram's 64-byte limit.
+  // The full merchant data is looked up from the pending merchant registry.
+  const shortId = callbackData.slice(CALLBACK_PREFIXES.CATEGORIZE_MERCHANT.length);
 
-  // Look up the real merchant name from session data (populated by Task 6)
-  const pendingMerchants = ctx.session.pendingMerchants || {};
-  const merchantData = pendingMerchants[merchantId];
-  const merchant = merchantData?.merchant || merchantId;
+  const registryData = await conversation.external(() => getPendingMerchant(shortId));
+  if (!registryData) {
+    await ctx.answerCallbackQuery(MESSAGES.ERROR_MERCHANT_ID_NOT_FOUND);
+    return;
+  }
+  const { merchantId, merchant } = registryData;
 
   // Remove the "Categorize with AI" button
   try {
@@ -76,13 +79,18 @@ export async function categorizationConversation(
 
   if (!userInput || userInput === '/cancel') {
     await contextCtx.reply(MESSAGES.CATEGORIZATION_CANCELLED);
-    await conversation.external(() => emitCategorySelected(merchantId, merchant, ''));
+    await conversation.external(() => {
+      emitCategorySelected(merchantId, merchant, '');
+      removePendingMerchant(shortId);
+    });
     return;
   }
 
   if (userInput.startsWith('/')) {
-    // Other commands: emit cancellation to unblock queue, then pass update through
-    await conversation.external(() => emitCategorySelected(merchantId, merchant, ''));
+    await conversation.external(() => {
+      emitCategorySelected(merchantId, merchant, '');
+      removePendingMerchant(shortId);
+    });
     await conversation.skip({ next: true });
     return;
   }
@@ -99,8 +107,10 @@ export async function categorizationConversation(
   } catch (error) {
     logger.error('Error categorizing merchant:', error);
     await contextCtx.reply(MESSAGES.CATEGORIZATION_ERROR);
-    // Emit cancellation to unblock the queue
-    await conversation.external(() => emitCategorySelected(merchantId, merchant, ''));
+    await conversation.external(() => {
+      emitCategorySelected(merchantId, merchant, '');
+      removePendingMerchant(shortId);
+    });
     return;
   }
 
@@ -149,8 +159,6 @@ export async function categorizationConversation(
   // Emit event for category selection (or cancellation)
   await conversation.external(() => emitCategorySelected(merchantId, merchant, selectedCategory));
 
-  // Clean up session data
-  if (ctx.session.pendingMerchants) {
-    delete ctx.session.pendingMerchants[merchantId];
-  }
+  // Clean up
+  await conversation.external(() => removePendingMerchant(shortId));
 }

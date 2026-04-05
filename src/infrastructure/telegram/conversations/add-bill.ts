@@ -29,7 +29,7 @@ interface ConfirmationResult {
 }
 
 async function waitForConfirmation(
-  conversation: Conversation<BotContext>,
+  conversation: Conversation<BotContext, BotContext>,
 ): Promise<ConfirmationResult> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -53,7 +53,7 @@ async function waitForConfirmation(
 }
 
 export async function addBillConversation(
-  conversation: Conversation<BotContext>,
+  conversation: Conversation<BotContext, BotContext>,
   ctx: BotContext,
 ): Promise<void> {
   await ctx.reply(

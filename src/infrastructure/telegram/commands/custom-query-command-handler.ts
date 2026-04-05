@@ -1,31 +1,31 @@
 import { Bot } from 'grammy';
-import { BaseCommandHandler } from './base-command-handler';
 import { BeancountQueryService } from '../../beancount/beancount-query.service';
-import { container } from '../../utils';
+import { container, Logger } from '../../utils';
+import { ILogger } from '../../utils';
 import { formatQueryResult } from '../../utils/query-result-formatter';
 import { NLPService } from '../../../domain/services/nlp.service';
 import { formatDateToMMDD } from '../../utils/date.utils';
 import { BotContext } from '../grammy-types';
 
-export class CustomQueryCommandHandler extends BaseCommandHandler {
+export class CustomQueryCommandHandler {
   private bot: Bot<BotContext>;
   private beancountService: BeancountQueryService;
   private nlpService: NLPService;
+  private logger: ILogger;
 
   constructor(bot: Bot<BotContext>) {
-    super();
     this.bot = bot;
     this.beancountService = container.getByClass(BeancountQueryService);
     this.nlpService = container.getByClass(NLPService);
+    this.logger = container.getByClass(Logger);
   }
 
   async handle(ctx: BotContext): Promise<boolean> {
     const message = ctx.message;
     const userId = ctx.from?.id;
-
     const text = message && 'text' in message ? message.text : undefined;
+
     if (!text || !userId) {
-      this.logger.warn('Received message without text or userId');
       return false;
     }
 
@@ -36,15 +36,12 @@ export class CustomQueryCommandHandler extends BaseCommandHandler {
     this.logger.info(`Processing query from user ${userId}: ${text}`);
 
     try {
-      const queryText = text;
-
       await ctx.reply('Analyzing your query...');
-      this.logger.debug('Starting NLP analysis for query');
 
-      const dateRange = await this.nlpService.parseDateRange(queryText);
+      const dateRange = await this.nlpService.parseDateRange(text);
 
       if (!dateRange) {
-        this.logger.warn(`Failed to parse date range from query: ${queryText}`);
+        this.logger.warn(`Failed to parse date range from query: ${text}`);
         await ctx.reply('Sorry, I couldn\'t understand your query. Please try to be more specific, for example: "查last 3 days", "查last week", "查last month"');
         return true;
       }
@@ -53,10 +50,7 @@ export class CustomQueryCommandHandler extends BaseCommandHandler {
 
       await ctx.reply(`Querying transactions from ${formatDateToMMDD(dateRange.startDate)} to ${formatDateToMMDD(dateRange.endDate)}...`);
 
-      this.logger.debug('Querying beancount service');
       const result = await this.beancountService.queryByDateRange(dateRange.startDate, dateRange.endDate);
-      this.logger.info(`Query returned ${result.assets.length} assets and ${result.expenses.length} expense categories`);
-
       const formattedMessage = formatQueryResult(result);
       await ctx.reply(formattedMessage, { parse_mode: 'HTML' });
       return true;
