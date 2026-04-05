@@ -37,6 +37,16 @@ export function removePendingMerchant(shortId: string): void {
   }
 }
 
+export function removePendingMerchantByMerchantId(merchantId: string): void {
+  pendingMerchantRegistry.delete(merchantId);
+  for (const [shortId, mid] of shortIdToMerchantId.entries()) {
+    if (mid === merchantId) {
+      shortIdToMerchantId.delete(shortId);
+      break;
+    }
+  }
+}
+
 export class TelegramAdapter {
   private bot: Bot<BotContext>;
   private logger: ILogger;
