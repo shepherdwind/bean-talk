@@ -93,13 +93,12 @@ export class EventListenerService {
             return;
           }
 
-          let message =
+          const message =
             `New Merchant Needs Categorization\n@${getAccountByEmail(data.email?.to)}\n\n` +
             `Merchant: <b>${data.merchant}</b>\n` +
             `Amount: <b>${data.amount?.value} ${data.amount?.currency}</b>\n` +
-            `Time: <b>${formatDateToUTC8(data.email?.date)}</b>\n`;
-
-          message += `\nPlease update the merchant category use AI assistance.`;
+            `Time: <b>${formatDateToUTC8(data.email?.date)}</b>\n` +
+            `\nSelect a category or provide more info:`;
 
           await this.telegramAdapter.sendNotification(
             message,

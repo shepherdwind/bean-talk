@@ -4,15 +4,15 @@ import { AccountType, Currency } from '../models/types';
 import { AccountingService } from './accounting.service';
 import { AccountName } from '../models/account';
 
-export interface CategoryOptions {
-  primaryCategory: string;
-  alternativeCategory: string;
-  suggestedNewCategory: string;
+export interface CategorySuggestions {
+  primary: string;
+  alternative: string;
 }
 
 export interface AutoCategoryResult {
   category: string;
   confidence: number;
+  suggestions: CategorySuggestions;
 }
 
 export interface ParsedExpenseData {
@@ -37,36 +37,39 @@ export class NLPService {
     this.accountingService = accountingService || container.getByClass(AccountingService);
   }
 
-  async categorizeMerchant(merchant: string, additionalInfo: string): Promise<CategoryOptions> {
+  async categorizeMerchantWithContext(merchant: string, additionalInfo: string): Promise<CategorySuggestions> {
     try {
-      // Get all expense accounts using AccountingService
-      const expenseAccounts = this.accountingService.getAllAccountNames();
+      const expenseAccounts = this.accountingService.getAllAccountNames()
+        .filter(name => name.startsWith('Expenses:'));
 
-      const prompt = `Please help categorize this merchant based on the following information:
+      const systemPrompt = `You are a financial transaction categorizer. Given a merchant name and additional context, pick the TWO best matching categories from the list below.
 
-Merchant Name: ${merchant}
-Additional Information: ${additionalInfo}
-
-Available categories are:
+Available expense categories:
 ${expenseAccounts.join('\n')}
 
-Please provide three category options in the following format:
-1. Primary Category: (choose the most appropriate category from the list above)
-2. Alternative Category: (choose another suitable category from the list above)
-3. Suggested New Category: (suggest a new category if none of the existing ones fit well)
+Respond with ONLY a JSON object in this exact format, no other text:
+{"primary": "best matching category", "alternative": "second best category"}
 
-Respond in exactly this format, with each option on a new line.`;
+Rules:
+- primary and alternative MUST be exactly from the provided list above, copy character-for-character
+- primary and alternative MUST be different categories
+- DO NOT invent, create, or suggest new categories — only use what is in the list`;
 
-      const response = await this.openaiAdapter.processMessage(prompt, '');
-      const lines = response.trim().split('\n');
-      
+      const response = await this.openaiAdapter.processMessage(systemPrompt, `Merchant: ${merchant}\nAdditional info: ${additionalInfo}`);
+      logger.debug(`AI categorize-with-context response for "${merchant}": ${response}`);
+      const jsonMatch = response.match(/\{.*\}/s);
+      if (!jsonMatch) {
+        logger.warn(`No JSON found in AI response for "${merchant}"`);
+        return { primary: '', alternative: '' };
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
       return {
-        primaryCategory: lines[0].replace('1. Primary Category:', '').trim(),
-        alternativeCategory: lines[1].replace('2. Alternative Category:', '').trim(),
-        suggestedNewCategory: lines[2].replace('3. Suggested New Category:', '').trim()
+        primary: parsed.primary || '',
+        alternative: parsed.alternative || '',
       };
     } catch (error) {
-      logger.error('Error categorizing merchant:', error);
+      logger.error('Error categorizing merchant with context:', error);
       throw error;
     }
   }
@@ -76,39 +79,44 @@ Respond in exactly this format, with each option on a new line.`;
       const expenseAccounts = this.accountingService.getAllAccountNames()
         .filter(name => name.startsWith('Expenses:'));
 
-      const prompt = `You are a financial transaction categorizer. Given a merchant name, pick the best matching category from the list below.
-
-Merchant Name: ${merchant}
+      const systemPrompt = `You are a financial transaction categorizer. Given a merchant name, pick the TWO best matching categories from the list below.
 
 Available expense categories:
 ${expenseAccounts.join('\n')}
 
 Respond with ONLY a JSON object in this exact format, no other text:
-{"category": "the best matching category from the list", "confidence": 0.95}
+{"primary": "best matching category", "alternative": "second best category", "confidence": 0.95}
 
 Rules:
-- confidence is a number between 0 and 1
+- confidence is a number between 0 and 1 for how sure you are about the primary category
 - Use 0.9+ for well-known merchants where the category is obvious
 - Use 0.5-0.8 for ambiguous merchants where the category is a guess
 - Use below 0.5 for completely unclear merchants
-- The category MUST be exactly one of the values from the provided list above, copy it character-for-character
-- DO NOT invent, create, or suggest new categories — only use what is in the list
-- If no category in the list fits well, set confidence below 0.5`;
+- primary and alternative MUST be exactly from the provided list above, copy character-for-character
+- primary and alternative MUST be different categories
+- DO NOT invent, create, or suggest new categories — only use what is in the list`;
 
-      const response = await this.openaiAdapter.processMessage(prompt, '');
+      const response = await this.openaiAdapter.processMessage(systemPrompt, `Categorize this merchant: ${merchant}`);
+      logger.debug(`AI auto-categorize response for "${merchant}": ${response}`);
       const jsonMatch = response.match(/\{.*\}/s);
       if (!jsonMatch) {
-        return { category: '', confidence: 0 };
+        logger.warn(`No JSON found in AI response for "${merchant}"`);
+        return { category: '', confidence: 0, suggestions: { primary: '', alternative: '' } };
       }
 
       const parsed = JSON.parse(jsonMatch[0]);
+      logger.debug(`AI auto-categorize parsed for "${merchant}": ${JSON.stringify(parsed)}`);
       return {
-        category: parsed.category || '',
+        category: parsed.primary || '',
         confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
+        suggestions: {
+          primary: parsed.primary || '',
+          alternative: parsed.alternative || '',
+        },
       };
     } catch (error) {
       logger.error('Error auto-categorizing merchant:', error);
-      return { category: '', confidence: 0 };
+      return { category: '', confidence: 0, suggestions: { primary: '', alternative: '' } };
     }
   }
 

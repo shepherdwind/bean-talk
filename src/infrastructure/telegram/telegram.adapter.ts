@@ -7,11 +7,14 @@ import { addBillConversation, ADD_BILL_CONVERSATION_ID } from './conversations/a
 import { categorizationConversation, CATEGORIZATION_CONVERSATION_ID } from './conversations/categorization';
 import { QueryCommandHandler } from './commands/query-command-handler';
 import { CustomQueryCommandHandler } from './commands/custom-query-command-handler';
-import { CALLBACK_PREFIXES } from './commands/categorization-constants';
+import { CALLBACK_PREFIXES, MESSAGES } from './commands/categorization-constants';
+import { ApplicationEventEmitter } from '../events/event-emitter';
+import { EventTypes } from '../events/event-types';
 
 // Short ID → full merchant data mapping for callback data (Telegram 64-byte limit)
 const pendingMerchantRegistry = new Map<string, { merchantId: string; merchant: string }>();
 const shortIdToMerchantId = new Map<string, string>();
+const pendingSuggestions = new Map<string, { primary: string; alternative: string }>();
 
 function generateShortId(merchantId: string): string {
   let hash = 0;
@@ -35,6 +38,11 @@ export function removePendingMerchant(shortId: string): void {
     pendingMerchantRegistry.delete(merchantId);
     shortIdToMerchantId.delete(shortId);
   }
+  pendingSuggestions.delete(shortId);
+}
+
+export function getPendingSuggestions(shortId: string): { primary: string; alternative: string } | undefined {
+  return pendingSuggestions.get(shortId);
 }
 
 export function removePendingMerchantByMerchantId(merchantId: string): void {
@@ -97,7 +105,46 @@ export class TelegramAdapter {
       await ctx.reply('No active operation to cancel.');
     });
 
-    // Categorize merchant button → enters categorization conversation
+    // Direct category selection buttons (primary/alternative)
+    this.bot.callbackQuery(new RegExp(`^(${CALLBACK_PREFIXES.SELECT_PRIMARY}|${CALLBACK_PREFIXES.SELECT_ALTERNATIVE})`), async (ctx) => {
+      const data = ctx.callbackQuery && 'data' in ctx.callbackQuery ? ctx.callbackQuery.data : '';
+      const isPrimary = data.startsWith(CALLBACK_PREFIXES.SELECT_PRIMARY);
+      const shortId = data.slice(isPrimary ? CALLBACK_PREFIXES.SELECT_PRIMARY.length : CALLBACK_PREFIXES.SELECT_ALTERNATIVE.length);
+
+      const registryData = getPendingMerchant(shortId);
+      const suggestions = getPendingSuggestions(shortId);
+      if (!registryData || !suggestions) {
+        await ctx.answerCallbackQuery(MESSAGES.CATEGORIZATION_EXPIRED);
+        return;
+      }
+
+      const selectedCategory = isPrimary ? suggestions.primary : suggestions.alternative;
+      const { merchantId, merchant } = registryData;
+
+      // Emit category selected event
+      const eventEmitter = container.getByClass(ApplicationEventEmitter);
+      eventEmitter.emit(EventTypes.MERCHANT_CATEGORY_SELECTED, {
+        merchantId,
+        merchant,
+        selectedCategory,
+        timestamp: new Date().toISOString(),
+      });
+
+      try {
+        await ctx.editMessageText(MESSAGES.CATEGORY_SELECTED(merchant, selectedCategory), { parse_mode: 'HTML' });
+      } catch {
+        // Message may already have been modified
+      }
+      await ctx.answerCallbackQuery();
+      removePendingMerchant(shortId);
+    });
+
+    // Provide more info button → enters categorization conversation
+    this.bot.callbackQuery(new RegExp(`^${CALLBACK_PREFIXES.PROVIDE_MORE_INFO}`), async (ctx) => {
+      await ctx.conversation.enter(CATEGORIZATION_CONVERSATION_ID);
+    });
+
+    // Legacy: Categorize merchant button → enters categorization conversation
     this.bot.callbackQuery(new RegExp(`^${CALLBACK_PREFIXES.CATEGORIZE_MERCHANT}`), async (ctx) => {
       await ctx.conversation.enter(CATEGORIZATION_CONVERSATION_ID);
     });
@@ -138,7 +185,7 @@ export class TelegramAdapter {
     }
   }
 
-  async sendNotification(message: string, merchantId?: string, categorizationData?: { merchant?: string; merchantId?: string }): Promise<void> {
+  async sendNotification(message: string, merchantId?: string, categorizationData?: { merchant?: string; merchantId?: string; suggestions?: { primary: string; alternative: string } }): Promise<void> {
     if (!this.chatId) {
       this.logger.warn('No chat ID configured for Telegram notifications');
       return;
@@ -157,13 +204,25 @@ export class TelegramAdapter {
           const shortId = generateShortId(merchantId);
           shortIdToMerchantId.set(shortId, merchantId);
 
+          const suggestions = categorizationData?.suggestions;
+          const inlineKeyboard = suggestions?.primary
+            ? [
+                [{ text: `📁 ${suggestions.primary}`, callback_data: `${CALLBACK_PREFIXES.SELECT_PRIMARY}${shortId}` }],
+                [{ text: `📁 ${suggestions.alternative}`, callback_data: `${CALLBACK_PREFIXES.SELECT_ALTERNATIVE}${shortId}` }],
+                [{ text: '💬 Provide more info', callback_data: `${CALLBACK_PREFIXES.PROVIDE_MORE_INFO}${shortId}` }],
+              ]
+            : [
+                [{ text: '🤖 Categorize with AI', callback_data: `${CALLBACK_PREFIXES.CATEGORIZE_MERCHANT}${shortId}` }],
+              ];
+
+          // Store suggestions for later retrieval
+          if (suggestions) {
+            pendingSuggestions.set(shortId, suggestions);
+          }
+
           await this.bot.api.sendMessage(this.chatId, message, {
             parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [[
-                { text: '🤖 Categorize with AI', callback_data: `${CALLBACK_PREFIXES.CATEGORIZE_MERCHANT}${shortId}` },
-              ]],
-            },
+            reply_markup: { inline_keyboard: inlineKeyboard },
           });
         } else {
           await this.bot.api.sendMessage(this.chatId, message, { parse_mode: 'HTML' });

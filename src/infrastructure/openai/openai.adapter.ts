@@ -21,17 +21,25 @@ export class OpenAIAdapter {
 
   async processMessage(systemPrompt: string, userMessage: string): Promise<string> {
     try {
-      const response = await this.openai.chat.completions.create({
+      const stream = await this.openai.chat.completions.create({
         model: this.model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
         ],
-        temperature: 0.3, // Lower temperature for more consistent output
+        temperature: 0.3,
         max_tokens: 1000,
+        stream: true,
       });
 
-      return response.choices[0]?.message?.content || '';
+      let result = '';
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) {
+          result += content;
+        }
+      }
+      return result;
     } catch (error) {
       logger.error('Error calling OpenAI API:', error);
       throw error;

@@ -3,14 +3,15 @@ import { CALLBACK_PREFIXES, MESSAGES, CATEGORY_TYPES } from '../categorization-c
 describe('categorization-constants', () => {
   describe('CALLBACK_PREFIXES', () => {
     it('should have all required prefixes', () => {
-      expect(CALLBACK_PREFIXES.SELECT_CATEGORY).toBeDefined();
-      expect(CALLBACK_PREFIXES.CANCEL_CATEGORIZATION).toBeDefined();
       expect(CALLBACK_PREFIXES.CATEGORIZE_MERCHANT).toBeDefined();
+      expect(CALLBACK_PREFIXES.SELECT_PRIMARY).toBeDefined();
+      expect(CALLBACK_PREFIXES.SELECT_ALTERNATIVE).toBeDefined();
+      expect(CALLBACK_PREFIXES.PROVIDE_MORE_INFO).toBeDefined();
     });
 
     it('should have non-empty string values', () => {
-      expect(typeof CALLBACK_PREFIXES.SELECT_CATEGORY).toBe('string');
-      expect(CALLBACK_PREFIXES.SELECT_CATEGORY.length).toBeGreaterThan(0);
+      expect(typeof CALLBACK_PREFIXES.CATEGORIZE_MERCHANT).toBe('string');
+      expect(CALLBACK_PREFIXES.CATEGORIZE_MERCHANT.length).toBeGreaterThan(0);
     });
   });
 
@@ -41,7 +42,6 @@ describe('categorization-constants', () => {
     it('should have all required types', () => {
       expect(CATEGORY_TYPES.PRIMARY).toBeDefined();
       expect(CATEGORY_TYPES.ALTERNATIVE).toBeDefined();
-      expect(CATEGORY_TYPES.SUGGESTED).toBeDefined();
     });
   });
 });

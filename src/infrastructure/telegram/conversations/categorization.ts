@@ -2,7 +2,7 @@ import { Conversation } from '@grammyjs/conversations';
 import { InlineKeyboard } from 'grammy';
 import { BotContext } from '../grammy-types';
 import { container } from '../../utils';
-import { NLPService, CategoryOptions } from '../../../domain/services/nlp.service';
+import { NLPService } from '../../../domain/services/nlp.service';
 import { ApplicationEventEmitter } from '../../events/event-emitter';
 import { EventTypes } from '../../events/event-types';
 import { logger } from '../../utils/logger';
@@ -10,24 +10,6 @@ import { MESSAGES, CALLBACK_PREFIXES } from '../commands/categorization-constant
 import { getPendingMerchant, removePendingMerchant } from '../telegram.adapter';
 
 export const CATEGORIZATION_CONVERSATION_ID = 'categorization';
-
-function createCategoryKeyboard(categories: CategoryOptions): InlineKeyboard {
-  return new InlineKeyboard()
-    .text(`📁 ${categories.primaryCategory}`, 'cat:primary').row()
-    .text(`📁 ${categories.alternativeCategory}`, 'cat:alternative').row()
-    .text(`📁 ${categories.suggestedNewCategory}`, 'cat:suggested').row()
-    .text('❌ Cancel', 'cat:cancel');
-}
-
-function createCategoryResultMessage(merchant: string, categories: CategoryOptions): string {
-  return (
-    `I've analyzed "${merchant}" and found these possible categories:\n\n` +
-    `1. ${categories.primaryCategory}\n` +
-    `2. ${categories.alternativeCategory}\n` +
-    `3. ${categories.suggestedNewCategory}\n\n` +
-    `Please select the most appropriate category:`
-  );
-}
 
 function emitCategorySelected(merchantId: string, merchant: string, selectedCategory: string): void {
   const eventEmitter = container.getByClass(ApplicationEventEmitter);
@@ -43,17 +25,21 @@ export async function categorizationConversation(
   conversation: Conversation<BotContext, BotContext>,
   ctx: BotContext,
 ): Promise<void> {
-  // Extract merchantId from callback query data
+  // Extract shortId from callback query data (supports both mi_ and legacy categorize_merchant_)
   const callbackData = ctx.callbackQuery && 'data' in ctx.callbackQuery
     ? ctx.callbackQuery.data : undefined;
 
-  if (!callbackData?.startsWith(CALLBACK_PREFIXES.CATEGORIZE_MERCHANT)) {
+  const prefix = callbackData?.startsWith(CALLBACK_PREFIXES.PROVIDE_MORE_INFO)
+    ? CALLBACK_PREFIXES.PROVIDE_MORE_INFO
+    : callbackData?.startsWith(CALLBACK_PREFIXES.CATEGORIZE_MERCHANT)
+      ? CALLBACK_PREFIXES.CATEGORIZE_MERCHANT
+      : undefined;
+
+  if (!prefix || !callbackData) {
     return;
   }
 
-  // The callback data contains a short hash ID to stay within Telegram's 64-byte limit.
-  // The full merchant data is looked up from the pending merchant registry.
-  const shortId = callbackData.slice(CALLBACK_PREFIXES.CATEGORIZE_MERCHANT.length);
+  const shortId = callbackData.slice(prefix.length);
 
   const registryData = await conversation.external(() => getPendingMerchant(shortId));
   if (!registryData) {
@@ -62,7 +48,7 @@ export async function categorizationConversation(
   }
   const { merchantId, merchant } = registryData;
 
-  // Remove the "Categorize with AI" button
+  // Remove buttons from original message
   try {
     await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
   } catch {
@@ -95,14 +81,14 @@ export async function categorizationConversation(
     return;
   }
 
-  // Call NLP to categorize
+  // Call NLP to categorize with additional context
   await contextCtx.reply(MESSAGES.ANALYZING);
 
-  let categories: CategoryOptions;
+  let suggestions: { primary: string; alternative: string };
   try {
-    categories = await conversation.external(() => {
+    suggestions = await conversation.external(() => {
       const nlpService = container.getByClass(NLPService);
-      return nlpService.categorizeMerchant(merchant, userInput);
+      return nlpService.categorizeMerchantWithContext(merchant, userInput);
     });
   } catch (error) {
     logger.error('Error categorizing merchant:', error);
@@ -114,19 +100,35 @@ export async function categorizationConversation(
     return;
   }
 
-  // Show category options
-  const keyboard = createCategoryKeyboard(categories);
-  await contextCtx.reply(createCategoryResultMessage(merchant, categories), {
-    reply_markup: keyboard,
-  });
+  if (!suggestions.primary && !suggestions.alternative) {
+    await contextCtx.reply(MESSAGES.CATEGORIZATION_ERROR);
+    await conversation.external(() => {
+      emitCategorySelected(merchantId, merchant, '');
+      removePendingMerchant(shortId);
+    });
+    return;
+  }
 
-  // Wait for category selection, skip unrelated updates
+  // Show 2 category options
+  const keyboard = new InlineKeyboard()
+    .text(`📁 ${suggestions.primary}`, 'cat:primary').row()
+    .text(`📁 ${suggestions.alternative}`, 'cat:alternative').row()
+    .text('❌ Cancel', 'cat:cancel');
+
+  await contextCtx.reply(
+    `Based on your input, here are the suggested categories for "${merchant}":\n\n` +
+    `1. ${suggestions.primary}\n` +
+    `2. ${suggestions.alternative}\n\n` +
+    `Please select a category:`,
+    { reply_markup: keyboard },
+  );
+
+  // Wait for category selection
   const categoryMap: Record<string, string> = {
-    'cat:primary': categories.primaryCategory,
-    'cat:alternative': categories.alternativeCategory,
-    'cat:suggested': categories.suggestedNewCategory,
+    'cat:primary': suggestions.primary,
+    'cat:alternative': suggestions.alternative,
   };
-  const validCallbacks = ['cat:primary', 'cat:alternative', 'cat:suggested', 'cat:cancel'];
+  const validCallbacks = ['cat:primary', 'cat:alternative', 'cat:cancel'];
 
   let selectedCategory = '';
   // eslint-disable-next-line no-constant-condition

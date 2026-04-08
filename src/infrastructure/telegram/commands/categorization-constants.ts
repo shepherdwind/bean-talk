@@ -2,9 +2,10 @@
 
 // 回调数据前缀
 export const CALLBACK_PREFIXES = {
-  SELECT_CATEGORY: 'sc',
-  CANCEL_CATEGORIZATION: 'cc',
-  CATEGORIZE_MERCHANT: 'categorize_merchant_'
+  CATEGORIZE_MERCHANT: 'categorize_merchant_',
+  SELECT_PRIMARY: 'sp_',
+  SELECT_ALTERNATIVE: 'sa_',
+  PROVIDE_MORE_INFO: 'mi_',
 };
 
 // 消息模板
@@ -33,5 +34,4 @@ export const MESSAGES = {
 export const CATEGORY_TYPES = {
   PRIMARY: 'primary',
   ALTERNATIVE: 'alternative',
-  SUGGESTED: 'suggested'
-}; 
+};

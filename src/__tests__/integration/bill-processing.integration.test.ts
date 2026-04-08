@@ -245,7 +245,7 @@ Please do not reply to this email as it is auto generated`,
 
       // AI returns low confidence — should trigger manual flow
       mockOpenAIAdapter.processMessage.mockResolvedValue(
-        '{"category": "Expenses:Food:Dining", "confidence": 0.5}'
+        '{"primary": "Expenses:Food:Dining", "alternative": "Expenses:Food", "confidence": 0.5}'
       );
 
       const testEmail = createTestEmail();
@@ -280,7 +280,7 @@ Please do not reply to this email as it is auto generated`,
 
       // AI returns high confidence — should auto-categorize
       mockOpenAIAdapter.processMessage.mockResolvedValue(
-        '{"category": "Expenses:Food:Dining", "confidence": 0.95}'
+        '{"primary": "Expenses:Food:Dining", "alternative": "Expenses:Food", "confidence": 0.95}'
       );
 
       const testEmail = createTestEmail();
@@ -311,7 +311,7 @@ Please do not reply to this email as it is auto generated`,
 
       // AI returns low confidence to trigger manual flow
       mockOpenAIAdapter.processMessage.mockResolvedValue(
-        '{"category": "Expenses:Food:Dining", "confidence": 0.3}'
+        '{"primary": "Expenses:Food:Dining", "alternative": "Expenses:Food", "confidence": 0.3}'
       );
 
       const testEmail = createTestEmail();
@@ -342,27 +342,23 @@ Please do not reply to this email as it is auto generated`,
   });
 
   describe('Categorization: AI classify → save mapping', () => {
-    it('should parse NLP response into three category suggestions', async () => {
+    it('should parse NLP response into two category suggestions with context', async () => {
       mockOpenAIAdapter.processMessage.mockResolvedValue(
-        '1. Primary Category: Expenses:Food:Dining\n' +
-        '2. Alternative Category: Expenses:Food:Delivery\n' +
-        '3. Suggested New Category: Expenses:Food:GrabFood'
+        '{"primary": "Expenses:Food:Dining", "alternative": "Expenses:Food"}'
       );
 
       const nlpService = container.getByClass(NLPService);
-      const result = await nlpService.categorizeMerchant('GRAB FOOD', 'food delivery app');
+      const result = await nlpService.categorizeMerchantWithContext('GRAB FOOD', 'food delivery app');
 
       expect(result).toEqual({
-        primaryCategory: 'Expenses:Food:Dining',
-        alternativeCategory: 'Expenses:Food:Delivery',
-        suggestedNewCategory: 'Expenses:Food:GrabFood',
+        primary: 'Expenses:Food:Dining',
+        alternative: 'Expenses:Food',
       });
 
-      // Verify prompt contains merchant name and account list
-      const prompt = mockOpenAIAdapter.processMessage.mock.calls[0][0];
-      expect(prompt).toContain('GRAB FOOD');
-      expect(prompt).toContain('food delivery app');
-      expect(prompt).toContain('Available categories');
+      // Verify user message contains merchant name and additional info
+      const userMessage = mockOpenAIAdapter.processMessage.mock.calls[0][1];
+      expect(userMessage).toContain('GRAB FOOD');
+      expect(userMessage).toContain('food delivery app');
     });
 
     it('should save category to mapping when MERCHANT_CATEGORY_SELECTED event is emitted', async () => {

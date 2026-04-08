@@ -15,4 +15,8 @@ export interface MerchantCategorizationEvent {
     currency: string;
   };
   email?: Email;
+  suggestions?: {
+    primary: string;
+    alternative: string;
+  };
 }

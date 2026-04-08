@@ -134,11 +134,11 @@ export class DBSEmailParser implements EmailParser {
       );
     }
 
-    // 3. Low confidence — notify for manual categorization
+    // 3. Low confidence — notify for manual categorization with AI suggestions
     logger.info(
       `AI uncertain for "${merchant}" (confidence: ${aiResult.confidence}), requesting manual categorization`
     );
-    this.emitMerchantCategorizationEvent(merchant, email);
+    this.emitMerchantCategorizationEvent(merchant, email, aiResult.suggestions);
     return null;
   }
 
@@ -147,7 +147,8 @@ export class DBSEmailParser implements EmailParser {
    */
   private emitMerchantCategorizationEvent(
     merchant: string,
-    email: Email
+    email: Email,
+    suggestions?: { primary: string; alternative: string }
   ): void {
     const timestamp = new Date().toISOString();
     // Use only merchant name as ID since we only need to categorize each merchant once
@@ -162,6 +163,7 @@ export class DBSEmailParser implements EmailParser {
         value: extractTransactionData(email)?.amount || 0,
         currency: extractTransactionData(email)?.currency || "SGD",
       },
+      suggestions,
     };
 
     logger.info(

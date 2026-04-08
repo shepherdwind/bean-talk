@@ -10,10 +10,9 @@ jest.mock('../../../utils/logger', () => ({
 jest.mock('../../../utils/container', () => ({
   container: {
     getByClass: jest.fn().mockReturnValue({
-      categorizeMerchant: jest.fn().mockResolvedValue({
-        primaryCategory: 'Expenses:Food:Dining',
-        alternativeCategory: 'Expenses:Food',
-        suggestedNewCategory: 'Expenses:Food:Delivery',
+      categorizeMerchantWithContext: jest.fn().mockResolvedValue({
+        primary: 'Expenses:Food:Dining',
+        alternative: 'Expenses:Food',
       }),
       emit: jest.fn(),
     }),
@@ -139,7 +138,7 @@ describe('categorizationConversation', () => {
     );
   });
 
-  it('should handle NLP categorization and category selection', async () => {
+  it('should handle NLP categorization and category selection via provide more info', async () => {
     (getPendingMerchant as jest.Mock).mockReturnValue({
       merchantId: 'grab_food',
       merchant: 'GRAB FOOD',
@@ -172,7 +171,7 @@ describe('categorizationConversation', () => {
     };
 
     const mockCtx = {
-      callbackQuery: { data: `${CALLBACK_PREFIXES.CATEGORIZE_MERCHANT}abc123` },
+      callbackQuery: { data: `${CALLBACK_PREFIXES.PROVIDE_MORE_INFO}abc123` },
       editMessageReplyMarkup: jest.fn().mockResolvedValue(undefined),
       answerCallbackQuery: jest.fn().mockResolvedValue(undefined),
       reply: jest.fn().mockResolvedValue(undefined),

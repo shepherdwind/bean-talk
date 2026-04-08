@@ -42,82 +42,87 @@ describe('NLPService', () => {
     service = new NLPService(mockOpenAI, mockAccounting);
   });
 
-  describe('categorizeMerchant', () => {
-    it('should parse three category options from response', async () => {
+  describe('categorizeMerchantWithContext', () => {
+    it('should parse two category suggestions from JSON response', async () => {
       mockOpenAI.processMessage.mockResolvedValue(
-        '1. Primary Category: Expenses:Food:Dining\n' +
-        '2. Alternative Category: Expenses:Food\n' +
-        '3. Suggested New Category: Expenses:Food:Delivery'
+        '{"primary": "Expenses:Food:Dining", "alternative": "Expenses:Food"}'
       );
 
-      const result = await service.categorizeMerchant('GRAB FOOD', 'food app');
+      const result = await service.categorizeMerchantWithContext('GRAB FOOD', 'food app');
       expect(result).toEqual({
-        primaryCategory: 'Expenses:Food:Dining',
-        alternativeCategory: 'Expenses:Food',
-        suggestedNewCategory: 'Expenses:Food:Delivery',
+        primary: 'Expenses:Food:Dining',
+        alternative: 'Expenses:Food',
       });
 
-      // Verify prompt contains merchant and additional info
-      const prompt = mockOpenAI.processMessage.mock.calls[0][0];
-      expect(prompt).toContain('GRAB FOOD');
-      expect(prompt).toContain('food app');
+      // Verify user message contains merchant and additional info
+      const userMessage = mockOpenAI.processMessage.mock.calls[0][1];
+      expect(userMessage).toContain('GRAB FOOD');
+      expect(userMessage).toContain('food app');
+    });
+
+    it('should return empty suggestions when no JSON found', async () => {
+      mockOpenAI.processMessage.mockResolvedValue('No valid response');
+      const result = await service.categorizeMerchantWithContext('M', 'info');
+      expect(result).toEqual({ primary: '', alternative: '' });
     });
 
     it('should throw when OpenAI fails', async () => {
       mockOpenAI.processMessage.mockRejectedValue(new Error('API error'));
-      await expect(service.categorizeMerchant('M', 'info')).rejects.toThrow('API error');
+      await expect(service.categorizeMerchantWithContext('M', 'info')).rejects.toThrow('API error');
     });
   });
 
   describe('autoCategorizeMerchant', () => {
-    it('should parse JSON response with category and confidence', async () => {
+    it('should parse JSON response with category, confidence, and suggestions', async () => {
       mockOpenAI.processMessage.mockResolvedValue(
-        '{"category": "Expenses:Food:Dining", "confidence": 0.95}'
+        '{"primary": "Expenses:Food:Dining", "alternative": "Expenses:Food", "confidence": 0.95}'
       );
 
       const result = await service.autoCategorizeMerchant('GRAB FOOD');
       expect(result).toEqual({
         category: 'Expenses:Food:Dining',
         confidence: 0.95,
+        suggestions: { primary: 'Expenses:Food:Dining', alternative: 'Expenses:Food' },
       });
     });
 
     it('should handle JSON embedded in other text', async () => {
       mockOpenAI.processMessage.mockResolvedValue(
-        'Here is the result: {"category": "Expenses:Food", "confidence": 0.8} end'
+        'Here is the result: {"primary": "Expenses:Food", "alternative": "Expenses:Food:Dining", "confidence": 0.8} end'
       );
 
       const result = await service.autoCategorizeMerchant('GRAB');
       expect(result.category).toBe('Expenses:Food');
       expect(result.confidence).toBe(0.8);
+      expect(result.suggestions).toEqual({ primary: 'Expenses:Food', alternative: 'Expenses:Food:Dining' });
     });
 
     it('should return safe defaults when no JSON found', async () => {
       mockOpenAI.processMessage.mockResolvedValue('No valid response');
 
       const result = await service.autoCategorizeMerchant('UNKNOWN');
-      expect(result).toEqual({ category: '', confidence: 0 });
+      expect(result).toEqual({ category: '', confidence: 0, suggestions: { primary: '', alternative: '' } });
     });
 
     it('should return safe defaults on API error', async () => {
       mockOpenAI.processMessage.mockRejectedValue(new Error('timeout'));
 
       const result = await service.autoCategorizeMerchant('M');
-      expect(result).toEqual({ category: '', confidence: 0 });
+      expect(result).toEqual({ category: '', confidence: 0, suggestions: { primary: '', alternative: '' } });
     });
 
-    it('should handle missing category or non-numeric confidence', async () => {
+    it('should handle missing fields or non-numeric confidence', async () => {
       mockOpenAI.processMessage.mockResolvedValue(
         '{"confidence": "high"}'
       );
 
       const result = await service.autoCategorizeMerchant('M');
-      expect(result).toEqual({ category: '', confidence: 0 });
+      expect(result).toEqual({ category: '', confidence: 0, suggestions: { primary: '', alternative: '' } });
     });
 
     it('should only include expense accounts in prompt', async () => {
       mockOpenAI.processMessage.mockResolvedValue(
-        '{"category": "Expenses:Food", "confidence": 0.9}'
+        '{"primary": "Expenses:Food", "alternative": "Expenses:Food:Dining", "confidence": 0.9}'
       );
 
       await service.autoCategorizeMerchant('GRAB');
